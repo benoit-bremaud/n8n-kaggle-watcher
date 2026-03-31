@@ -6,14 +6,15 @@
         "pollTimes": {
           "item": [
             {
-              "mode": "everyMinute",
-              "value": 5
+              "mode": "everyDay",
+              "hour": 8,
+              "minute": 0
             }
           ]
         },
         "filters": {
           "sender": "no-reply@kaggle.com",
-          "subject": "Competition"
+          "subject": "Launch"
         },
         "options": {
           "downloadAttachments": false
@@ -51,7 +52,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse Kaggle Competition Launch email\nconst subject = $input.first().json.subject || '';\nconst body = $input.first().json.text || $input.first().json.html || '';\n\n// Extract competition name from subject\n// Format: \"Competition Launch - ARC Prize 2026\"\nconst nameMatch = subject.match(/Competition Launch\\s*[-–—]\\s*(.+)/i);\nconst competitionName = nameMatch ? nameMatch[1].trim() : subject;\n\n// Extract deadline from body\n// Common formats: \"Deadline: March 15, 2026\", \"ends on 2026-03-15\"\nconst deadlinePatterns = [\n  /deadline[:\\s]+([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /ends?\\s+on\\s+([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /deadline[:\\s]+(\\d{4}-\\d{2}-\\d{2})/i,\n  /closes?\\s+on\\s+([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i\n];\nlet deadline = 'Unknown';\nfor (const pattern of deadlinePatterns) {\n  const match = body.match(pattern);\n  if (match) {\n    deadline = match[1].trim();\n    break;\n  }\n}\n\n// Extract track/category\nconst trackPatterns = [\n  /track[:\\s]+([^\\n<]+)/i,\n  /category[:\\s]+([^\\n<]+)/i,\n  /type[:\\s]+([^\\n<]+)/i\n];\nlet track = 'Other';\nfor (const pattern of trackPatterns) {\n  const match = body.match(pattern);\n  if (match) {\n    track = match[1].trim();\n    break;\n  }\n}\n\n// Extract Kaggle URL\nconst urlMatch = body.match(/https:\\/\\/www\\.kaggle\\.com\\/competitions\\/[^\\s\"'<>]+/i)\n  || body.match(/https:\\/\\/www\\.kaggle\\.com\\/c\\/[^\\s\"'<>]+/i);\nconst url = urlMatch ? urlMatch[0] : 'https://www.kaggle.com/competitions';\n\nreturn [{\n  json: {\n    competition_name: competitionName,\n    deadline: deadline,\n    track: track,\n    url: url,\n    raw_subject: subject\n  }\n}];"
+        "jsCode": "// Parse Kaggle Competition/Hackathon Launch email\nconst subject = $input.first().json.subject || '';\nconst body = $input.first().json.text || $input.first().json.html || '';\n\n// Detect event type from subject\n// Formats: \"Competition Launch: ARC Prize 2026\" or \"Hackathon Launch: MedGemma Impact Challenge\"\nlet eventType = 'competition';\nif (subject.match(/Hackathon Launch/i)) {\n  eventType = 'hackathon';\n}\n\n// Extract name from subject (separator is \":\" based on real emails)\nconst nameMatch = subject.match(/(?:Competition|Hackathon)\\s+Launch[:\\s]+(.+)/i);\nconst competitionName = nameMatch ? nameMatch[1].trim() : subject;\n\n// Extract deadline from body\nconst deadlinePatterns = [\n  /deadline[:\\s]+([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /ends?\\s+on\\s+([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /deadline[:\\s]+(\\d{4}-\\d{2}-\\d{2})/i,\n  /closes?\\s+on\\s+([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i\n];\nlet deadline = 'Unknown';\nfor (const pattern of deadlinePatterns) {\n  const match = body.match(pattern);\n  if (match) {\n    deadline = match[1].trim();\n    break;\n  }\n}\n\n// Extract track/category\nconst trackPatterns = [\n  /track[:\\s]+([^\\n<]+)/i,\n  /category[:\\s]+([^\\n<]+)/i,\n  /type[:\\s]+([^\\n<]+)/i\n];\nlet track = 'Other';\nfor (const pattern of trackPatterns) {\n  const match = body.match(pattern);\n  if (match) {\n    track = match[1].trim();\n    break;\n  }\n}\n\n// Extract Kaggle URL\nconst urlMatch = body.match(/https:\\/\\/www\\.kaggle\\.com\\/competitions\\/[^\\s\\\"'<>]+/i)\n  || body.match(/https:\\/\\/www\\.kaggle\\.com\\/c\\/[^\\s\\\"'<>]+/i);\nconst url = urlMatch ? urlMatch[0] : 'https://www.kaggle.com/competitions';\n\nreturn [{\n  json: {\n    event_type: eventType,\n    competition_name: competitionName,\n    deadline: deadline,\n    track: track,\n    url: url,\n    raw_subject: subject\n  }\n}];"
       },
       "id": "parse-email",
       "name": "Parse Email",
@@ -72,7 +73,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Match parsed email data against rules\nconst emailData = $('Parse Email').first().json;\nconst rulesFile = JSON.parse($input.first().json.data);\nconst rules = rulesFile.rules;\n\nlet matchedRule = null;\n\nfor (const rule of rules) {\n  const tracks = rule.match.track;\n  \n  // Wildcard match\n  if (tracks.includes('*')) {\n    matchedRule = rule;\n    break;\n  }\n  \n  // Check if email track matches any rule track (case-insensitive)\n  const emailTrack = emailData.track.toLowerCase();\n  const trackMatch = tracks.some(t => emailTrack.includes(t.toLowerCase()));\n  \n  // Check keyword match in competition name\n  let keywordMatch = true;\n  if (rule.match.keyword_in_name && rule.match.keyword_in_name.length > 0) {\n    const name = emailData.competition_name.toLowerCase();\n    keywordMatch = rule.match.keyword_in_name.some(k => name.includes(k.toLowerCase()));\n  }\n  \n  if (trackMatch && keywordMatch) {\n    matchedRule = rule;\n    break;\n  }\n}\n\nif (!matchedRule) {\n  // Fallback to default action\n  matchedRule = {\n    id: 'default',\n    name: 'Default Action',\n    actions: [{ type: rulesFile.default_action, config: {} }]\n  };\n}\n\n// Merge email data with matched rule actions\nconst results = matchedRule.actions.map(action => ({\n  json: {\n    ...emailData,\n    action_type: action.type,\n    action_config: action.config,\n    matched_rule: matchedRule.name\n  }\n}));\n\nreturn results;"
+        "jsCode": "// Match parsed email data against rules (supports event_type: competition/hackathon)\nconst emailData = $('Parse Email').first().json;\nconst rulesFile = JSON.parse($input.first().json.data);\nconst rules = rulesFile.rules;\n\nlet matchedRule = null;\n\nfor (const rule of rules) {\n  // Check event_type match first\n  const ruleEventType = rule.match.event_type || '*';\n  if (ruleEventType !== '*' && ruleEventType !== emailData.event_type) {\n    continue;\n  }\n  \n  const tracks = rule.match.track;\n  \n  // Check track match\n  let trackMatch = false;\n  if (tracks.includes('*')) {\n    trackMatch = true;\n  } else {\n    const emailTrack = emailData.track.toLowerCase();\n    trackMatch = tracks.some(t => emailTrack.includes(t.toLowerCase()));\n  }\n  \n  if (!trackMatch) continue;\n  \n  // Check keyword match in competition name\n  let keywordMatch = true;\n  if (rule.match.keyword_in_name && rule.match.keyword_in_name.length > 0) {\n    const name = emailData.competition_name.toLowerCase();\n    keywordMatch = rule.match.keyword_in_name.some(k => name.includes(k.toLowerCase()));\n  }\n  \n  if (keywordMatch) {\n    matchedRule = rule;\n    break;\n  }\n}\n\nif (!matchedRule) {\n  matchedRule = {\n    id: 'default',\n    name: 'Default Action',\n    actions: [{ type: rulesFile.default_action, config: {} }]\n  };\n}\n\n// Merge email data with matched rule actions\nconst results = matchedRule.actions.map(action => ({\n  json: {\n    ...emailData,\n    action_type: action.type,\n    action_config: action.config,\n    matched_rule: matchedRule.name\n  }\n}));\n\nreturn results;"
       },
       "id": "match-rule",
       "name": "Match Rule",
@@ -141,7 +142,7 @@
     {
       "parameters": {
         "chatId": "={{ $json.action_config.chat_id || '' }}",
-        "text": "={{ $json.action_config.message_template ? $json.action_config.message_template.replace('{{competition_name}}', $json.competition_name).replace('{{track}}', $json.track).replace('{{deadline}}', $json.deadline).replace('{{url}}', $json.url) : '🔔 New Competition: ' + $json.competition_name }}",
+        "text": "={{ $json.action_config.message_template ? $json.action_config.message_template.replace('{{competition_name}}', $json.competition_name).replace('{{track}}', $json.track).replace('{{deadline}}', $json.deadline).replace('{{url}}', $json.url).replace('{{event_type}}', $json.event_type) : '🔔 New ' + $json.event_type + ': ' + $json.competition_name }}",
         "additionalFields": {
           "parse_mode": "Markdown"
         }

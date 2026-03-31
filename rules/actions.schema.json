@@ -28,8 +28,12 @@
           },
           "match": {
             "type": "object",
-            "required": ["track"],
+            "required": ["event_type", "track"],
             "properties": {
+              "event_type": {
+                "type": "string",
+                "enum": ["competition", "hackathon", "*"]
+              },
               "track": {
                 "type": "array",
                 "items": { "type": "string" },
