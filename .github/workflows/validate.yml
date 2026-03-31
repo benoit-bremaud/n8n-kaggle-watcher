@@ -1,0 +1,29 @@
+name: Validate JSON
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "rules/**"
+      - "workflows/**"
+
+jobs:
+  validate:
+    name: JSON Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install ajv-cli
+        run: npm install -g ajv-cli ajv-formats
+
+      - name: Validate actions.json against schema
+        run: ajv validate -s rules/actions.schema.json -d rules/actions.json
+
+      - name: Validate n8n workflow JSON syntax
+        run: python3 -c "import json; json.load(open('workflows/kaggle-email-watcher.json'))"

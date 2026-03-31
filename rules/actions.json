@@ -1,0 +1,58 @@
+{
+  "$schema": "./actions.schema.json",
+  "version": "1.0.0",
+  "default_action": "telegram",
+  "rules": [
+    {
+      "id": "rule-ml-ia",
+      "name": "AI/ML Competitions",
+      "match": {
+        "track": ["AI/ML", "Machine Learning", "Deep Learning", "Computer Vision", "NLP"],
+        "keyword_in_name": []
+      },
+      "actions": [
+        {
+          "type": "telegram",
+          "config": {
+            "chat_id": "{{ TELEGRAM_CHAT_ID }}",
+            "message_template": "🏆 *New AI/ML Competition*\n\n*Name:* {{competition_name}}\n*Track:* {{track}}\n*Deadline:* {{deadline}}\n*URL:* {{url}}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rule-data-science",
+      "name": "Data Science Competitions",
+      "match": {
+        "track": ["Data Science", "Analytics", "Tabular", "Featured"],
+        "keyword_in_name": []
+      },
+      "actions": [
+        {
+          "type": "telegram",
+          "config": {
+            "chat_id": "{{ TELEGRAM_CHAT_ID }}",
+            "message_template": "📊 *New Data Science Competition*\n\n*Name:* {{competition_name}}\n*Track:* {{track}}\n*Deadline:* {{deadline}}\n*URL:* {{url}}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rule-catch-all",
+      "name": "All other competitions",
+      "match": {
+        "track": ["*"],
+        "keyword_in_name": []
+      },
+      "actions": [
+        {
+          "type": "telegram",
+          "config": {
+            "chat_id": "{{ TELEGRAM_CHAT_ID }}",
+            "message_template": "🔔 *New Kaggle Competition*\n\n*Name:* {{competition_name}}\n*Track:* {{track}}\n*Deadline:* {{deadline}}\n*URL:* {{url}}"
+          }
+        }
+      ]
+    }
+  ]
+}

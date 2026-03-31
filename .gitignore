@@ -1,0 +1,19 @@
+# Environment
+.env
+docker/.env
+
+# n8n data
+n8n_data/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+
+# Claude Code
+.claude/
