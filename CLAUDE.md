@@ -28,6 +28,11 @@ All code, comments, commits, and documentation in English.
 
 Run `make validate` before committing changes to `rules/` or `workflows/`.
 
+## PR Review Comments
+
+Follow the global PR review comment procedure (see `~/.claude/CLAUDE.md`).
+Summary: fetch → evaluate priority → reply inline → implement must-haves → verify CI → resolve thread.
+
 ## Do Not
 
 - Edit `workflows/*.json` by hand — always use n8n UI and export
