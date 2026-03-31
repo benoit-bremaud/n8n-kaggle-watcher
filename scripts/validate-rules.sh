@@ -22,16 +22,22 @@ else
   exit 1
 fi
 
-# Validate against schema (if ajv-cli is available)
-if command -v ajv &> /dev/null; then
-  if ajv validate -s "$PROJECT_ROOT/rules/actions.schema.json" -d "$PROJECT_ROOT/rules/actions.json"; then
-    echo "✓ actions.json passes schema validation"
-  else
-    echo "✗ actions.json fails schema validation"
-    exit 1
-  fi
+# Validate against schema (if jsonschema is available)
+if python3 -c "
+import json
+try:
+    from jsonschema import validate
+    schema = json.load(open('$PROJECT_ROOT/rules/actions.schema.json'))
+    data = json.load(open('$PROJECT_ROOT/rules/actions.json'))
+    validate(instance=data, schema=schema)
+    print('✓ actions.json passes schema validation')
+except ImportError:
+    print('⚠ jsonschema not installed, skipping schema validation (pip install jsonschema)')
+"; then
+  true
 else
-  echo "⚠ ajv-cli not installed, skipping schema validation (npm install -g ajv-cli)"
+  echo "✗ actions.json fails schema validation"
+  exit 1
 fi
 
 echo ""
