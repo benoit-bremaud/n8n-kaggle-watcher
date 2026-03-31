@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Kaggle Watcher Rules",
+  "description": "Configuration for routing Kaggle competition notifications",
+  "type": "object",
+  "required": ["version", "default_action", "rules"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "default_action": {
+      "type": "string",
+      "enum": ["telegram", "notion", "discord", "google_sheet", "webhook", "log_only"]
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "match", "actions"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^rule-[a-z0-9-]+$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "match": {
+            "type": "object",
+            "required": ["track"],
+            "properties": {
+              "track": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              },
+              "keyword_in_name": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "config"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["telegram", "notion", "discord", "google_sheet", "webhook", "log_only"]
+                },
+                "config": {
+                  "type": "object"
+                }
+              }
+            },
+            "minItems": 1
+          }
+        }
+      }
+    }
+  }
+}
