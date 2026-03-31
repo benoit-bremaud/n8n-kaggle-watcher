@@ -18,12 +18,12 @@ jobs:
         run: pip install jsonschema
 
       - name: Validate actions.json against schema
-        run: python3 -c "
-          import json
-          from jsonschema import validate
-          schema = json.load(open('rules/actions.schema.json'))
-          data = json.load(open('rules/actions.json'))
-          validate(instance=data, schema=schema)
+        run: |
+          python3 -c "
+          import json; from jsonschema import validate;
+          schema = json.load(open('rules/actions.schema.json'));
+          data = json.load(open('rules/actions.json'));
+          validate(instance=data, schema=schema);
           print('actions.json is valid')
           "
 
