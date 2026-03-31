@@ -93,9 +93,11 @@ Available in `message_template`:
 
 | Variable | Description |
 |----------|-------------|
-| `{{competition_name}}` | Competition name |
-| `{{track}}` | Track/category |
-| `{{deadline}}` | Deadline date |
+| `{{competition_name}}` | Competition/hackathon name |
+| `{{event_type}}` | `competition` or `hackathon` |
+| `{{deadline}}` | Entry deadline date |
+| `{{prize}}` | Total prize amount |
+| `{{track}}` | Track/category (if available) |
 | `{{url}}` | Kaggle competition URL |
 
 ## Development
