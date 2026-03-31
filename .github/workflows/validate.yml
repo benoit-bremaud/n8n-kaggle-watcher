@@ -23,7 +23,7 @@ jobs:
         run: npm install -g ajv-cli ajv-formats
 
       - name: Validate actions.json against schema
-        run: ajv validate -s rules/actions.schema.json -d rules/actions.json
+        run: ajv validate -s rules/actions.schema.json -d rules/actions.json --spec=draft7
 
       - name: Validate n8n workflow JSON syntax
         run: python3 -c "import json; json.load(open('workflows/kaggle-email-watcher.json'))"
