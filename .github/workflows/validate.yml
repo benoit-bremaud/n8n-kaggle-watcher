@@ -14,16 +14,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Install ajv-cli
-        run: npm install -g ajv-cli ajv-formats
+      - name: Install jsonschema
+        run: pip install jsonschema
 
       - name: Validate actions.json against schema
-        run: ajv validate -s rules/actions.schema.json -d rules/actions.json --spec=draft7
+        run: python3 -c "
+          import json
+          from jsonschema import validate
+          schema = json.load(open('rules/actions.schema.json'))
+          data = json.load(open('rules/actions.json'))
+          validate(instance=data, schema=schema)
+          print('actions.json is valid')
+          "
 
       - name: Validate n8n workflow JSON syntax
-        run: python3 -c "import json; json.load(open('workflows/kaggle-email-watcher.json'))"
+        run: python3 -c "import json; json.load(open('workflows/kaggle-email-watcher.json')); print('workflow JSON is valid')"
