@@ -78,3 +78,9 @@ This is the operational logbook, not a release changelog.
 - **PR #12** merged — badges (CI, License, n8n, Docker), updated Mermaid diagram with Heartbeat subgraph, template variables fixed to `{var}` format, intro updated to mention hackathon support
 - **Issue #5** closed
 - Copilot review: 3 comments addressed (table spacing, chat_id placeholder, intro consistency)
+
+### Social preview
+
+- **PR #13** merged — social preview HTML template (`docs/social-preview.html`), dark theme 1280x640, uploaded to GitHub Settings
+- **PR #14** merged — fix PR #13 Copilot review comments (HTML entity escape, emoji fonts, capture procedure documentation)
+- **Issue #4** closed
