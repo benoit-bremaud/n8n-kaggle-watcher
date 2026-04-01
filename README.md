@@ -5,7 +5,7 @@
 [![n8n](https://img.shields.io/badge/n8n-self--hosted-orange?logo=n8n)](https://n8n.io)
 [![Docker](https://img.shields.io/badge/Docker-compose-blue?logo=docker)](docker/docker-compose.yml)
 
-Automated Kaggle competition email watcher. Detects "Competition Launch" emails from Kaggle, parses competition details, and routes notifications via configurable rules.
+Automated Kaggle competition and hackathon email watcher. Detects "Competition Launch" and "Hackathon Launch" emails from Kaggle, parses event details, and routes notifications via configurable rules.
 
 ## Architecture
 
@@ -75,7 +75,7 @@ Edit `rules/actions.json` to define how competitions are routed:
         {
           "type": "telegram",
           "config": {
-            "chat_id": "",
+            "chat_id": "YOUR_CHAT_ID",
             "message_template": "New {track} competition: {competition_name}"
           }
         }
@@ -108,7 +108,7 @@ Available in `message_template`:
 | `{event_type}`       | `competition` or `hackathon` |
 | `{deadline}`         | Entry deadline date          |
 | `{prize}`            | Total prize amount           |
-| `{track}`            | Track/category (if available)|
+| `{track}`            | Track/category               |
 | `{url}`              | Kaggle competition URL       |
 
 ## Development
