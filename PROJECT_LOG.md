@@ -66,3 +66,15 @@ This is the operational logbook, not a release changelog.
 - Workflow published and active in n8n
 - Exported to `workflows/heartbeat.json`
 - PR review comment procedure updated in global CLAUDE.md: added "Disagree" priority, duplicate grouping, re-fetch cycle, and "do NOT resolve conversations" rule; this repository's CLAUDE.md summary updated to match
+
+### PR #10 + #11 merged
+
+- **PR #10** merged — heartbeat workflow added (`workflows/heartbeat.json`)
+- **PR #11** merged — fix PR #10 Copilot review comments (active flag, CLAUDE.md wording)
+- **Issue #9** closed
+
+### README update
+
+- **PR #12** merged — badges (CI, License, n8n, Docker), updated Mermaid diagram with Heartbeat subgraph, template variables fixed to `{var}` format, intro updated to mention hackathon support
+- **Issue #5** closed
+- Copilot review: 3 comments addressed (table spacing, chat_id placeholder, intro consistency)
