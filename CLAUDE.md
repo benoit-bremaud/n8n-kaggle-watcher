@@ -12,6 +12,7 @@ All code, comments, commits, and documentation in English.
 ## Key Files
 
 - `workflows/kaggle-email-watcher.json` — n8n workflow (edit in n8n UI, export as JSON)
+- `workflows/heartbeat.json` — daily health check workflow (07:55 Telegram notification)
 - `rules/actions.json` — rules engine configuration (validated by `rules/actions.schema.json`)
 - `docker/docker-compose.yml` — self-hosted n8n deployment
 - `Makefile` — project commands (`make up`, `make down`, `make validate`, `make logs`)
@@ -31,7 +32,7 @@ Run `make validate` before committing changes to `rules/` or `workflows/`.
 ## PR Review Comments
 
 Follow the global PR review comment procedure (see `~/.claude/CLAUDE.md`).
-Summary: fetch → evaluate priority → reply inline → implement must-haves → verify CI → resolve thread.
+Summary: fetch → evaluate priority → group duplicates → reply inline per comment → implement must-haves → re-fetch after push → verify CI. Do NOT resolve conversations — leave that to the human PR author.
 
 ## Do Not
 
