@@ -1,20 +1,31 @@
 # n8n-kaggle-watcher
 
+[![Validate JSON](https://github.com/benoit-bremaud/n8n-kaggle-watcher/actions/workflows/validate.yml/badge.svg)](https://github.com/benoit-bremaud/n8n-kaggle-watcher/actions/workflows/validate.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![n8n](https://img.shields.io/badge/n8n-self--hosted-orange?logo=n8n)](https://n8n.io)
+[![Docker](https://img.shields.io/badge/Docker-compose-blue?logo=docker)](docker/docker-compose.yml)
+
 Automated Kaggle competition email watcher. Detects "Competition Launch" emails from Kaggle, parses competition details, and routes notifications via configurable rules.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    A[Gmail] -->|Competition Launch email| B[n8n Trigger]
-    B --> C[Filter: kaggle.com]
-    C --> D[Parse Email]
-    D --> E[Read rules/actions.json]
-    E --> F[Match Rule]
-    F -->|telegram| G[Telegram Bot]
-    F -->|discord| H[Discord Webhook]
-    F -->|notion| I[Notion API]
-    F -->|google_sheet| J[Google Sheets]
+    subgraph Kaggle Email Watcher
+        A[Gmail] -->|Competition/Hackathon Launch| B[n8n Trigger]
+        B --> C[Filter: kaggle.com]
+        C --> D[Parse Email]
+        D --> E[Read rules/actions.json]
+        E --> F[Match Rule]
+        F -->|telegram| G[Telegram Bot]
+        F -->|discord| H[Discord Webhook]
+        F -->|notion| I[Notion API]
+        F -->|google_sheet| J[Google Sheets]
+    end
+
+    subgraph Heartbeat
+        K[Schedule: 07:55] --> L[Telegram: n8n is alive]
+    end
 ```
 
 ## Prerequisites
@@ -64,8 +75,8 @@ Edit `rules/actions.json` to define how competitions are routed:
         {
           "type": "telegram",
           "config": {
-            "chat_id": "YOUR_CHAT_ID",
-            "message_template": "New {{track}} competition: {{competition_name}}"
+            "chat_id": "",
+            "message_template": "New {track} competition: {competition_name}"
           }
         }
       ]
@@ -78,27 +89,27 @@ Rules are evaluated top-to-bottom. First match wins. Use `"track": ["*"]` as a c
 
 ### Supported Action Types
 
-| Type | Description | Status |
-|------|-------------|--------|
-| `telegram` | Send Telegram message | Implemented |
-| `discord` | Post to Discord webhook | Planned |
-| `notion` | Create Notion database entry | Planned |
-| `google_sheet` | Append row to Google Sheet | Planned |
-| `webhook` | Generic HTTP webhook | Planned |
-| `log_only` | Log to n8n console | Planned |
+| Type           | Description                  | Status      |
+| -------------- | ---------------------------- | ----------- |
+| `telegram`     | Send Telegram message        | Implemented |
+| `discord`      | Post to Discord webhook      | Planned     |
+| `notion`       | Create Notion database entry | Planned     |
+| `google_sheet` | Append row to Google Sheet   | Planned     |
+| `webhook`      | Generic HTTP webhook         | Planned     |
+| `log_only`     | Log to n8n console           | Planned     |
 
 ### Template Variables
 
 Available in `message_template`:
 
-| Variable | Description |
-|----------|-------------|
-| `{{competition_name}}` | Competition/hackathon name |
-| `{{event_type}}` | `competition` or `hackathon` |
-| `{{deadline}}` | Entry deadline date |
-| `{{prize}}` | Total prize amount |
-| `{{track}}` | Track/category (if available) |
-| `{{url}}` | Kaggle competition URL |
+| Variable             | Description                  |
+| -------------------- | ---------------------------- |
+| `{competition_name}` | Competition/hackathon name   |
+| `{event_type}`       | `competition` or `hackathon` |
+| `{deadline}`         | Entry deadline date          |
+| `{prize}`            | Total prize amount           |
+| `{track}`            | Track/category (if available)|
+| `{url}`              | Kaggle competition URL       |
 
 ## Development
 
@@ -113,6 +124,7 @@ make logs       # Follow n8n logs
 ## CI
 
 GitHub Actions validates JSON files on every PR to `main`:
+
 - `rules/actions.json` is validated against `rules/actions.schema.json`
 - `workflows/kaggle-email-watcher.json` syntax is checked
 
