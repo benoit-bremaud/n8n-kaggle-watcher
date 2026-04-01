@@ -1,6 +1,6 @@
 {
   "$schema": "./actions.schema.json",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "default_action": "telegram",
   "rules": [
     {
@@ -15,8 +15,8 @@
         {
           "type": "telegram",
           "config": {
-            "chat_id": "{{ TELEGRAM_CHAT_ID }}",
-            "message_template": "🏆 *New AI/ML Competition*\n\n*Name:* {{competition_name}}\n*Deadline:* {{deadline}}\n*Prize:* {{prize}}\n*URL:* {{url}}"
+            "chat_id": "",
+            "message_template": "🏆 *New AI/ML Competition*\n\n*Name:* {competition_name}\n*Deadline:* {deadline}\n*Prize:* {prize}\n*URL:* {url}"
           }
         }
       ]
@@ -33,8 +33,8 @@
         {
           "type": "telegram",
           "config": {
-            "chat_id": "{{ TELEGRAM_CHAT_ID }}",
-            "message_template": "📊 *New Data Science Competition*\n\n*Name:* {{competition_name}}\n*Deadline:* {{deadline}}\n*Prize:* {{prize}}\n*URL:* {{url}}"
+            "chat_id": "",
+            "message_template": "📊 *New Data Science Competition*\n\n*Name:* {competition_name}\n*Deadline:* {deadline}\n*Prize:* {prize}\n*URL:* {url}"
           }
         }
       ]
@@ -51,8 +51,8 @@
         {
           "type": "telegram",
           "config": {
-            "chat_id": "{{ TELEGRAM_CHAT_ID }}",
-            "message_template": "🔔 *New Kaggle Competition*\n\n*Name:* {{competition_name}}\n*Deadline:* {{deadline}}\n*Prize:* {{prize}}\n*URL:* {{url}}"
+            "chat_id": "",
+            "message_template": "🔔 *New Kaggle Competition*\n\n*Name:* {competition_name}\n*Deadline:* {deadline}\n*Prize:* {prize}\n*URL:* {url}"
           }
         }
       ]
@@ -69,8 +69,8 @@
         {
           "type": "telegram",
           "config": {
-            "chat_id": "{{ TELEGRAM_CHAT_ID }}",
-            "message_template": "⚡ *New AI/ML Hackathon*\n\n*Name:* {{competition_name}}\n*Deadline:* {{deadline}}\n*Prize:* {{prize}}\n*URL:* {{url}}\n\n_Hackathons are typically shorter with faster deadlines._"
+            "chat_id": "",
+            "message_template": "⚡ *New AI/ML Hackathon*\n\n*Name:* {competition_name}\n*Deadline:* {deadline}\n*Prize:* {prize}\n*URL:* {url}\n\n_Hackathons are typically shorter with faster deadlines._"
           }
         }
       ]
@@ -87,8 +87,8 @@
         {
           "type": "telegram",
           "config": {
-            "chat_id": "{{ TELEGRAM_CHAT_ID }}",
-            "message_template": "⚡ *New Kaggle Hackathon*\n\n*Name:* {{competition_name}}\n*Deadline:* {{deadline}}\n*Prize:* {{prize}}\n*URL:* {{url}}\n\n_Hackathons are typically shorter with faster deadlines._"
+            "chat_id": "",
+            "message_template": "⚡ *New Kaggle Hackathon*\n\n*Name:* {competition_name}\n*Deadline:* {deadline}\n*Prize:* {prize}\n*URL:* {url}\n\n_Hackathons are typically shorter with faster deadlines._"
           }
         }
       ]
