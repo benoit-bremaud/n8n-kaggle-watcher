@@ -58,3 +58,11 @@ This is the operational logbook, not a release changelog.
 - **PROJECT_LOG.md** created — chronological operational logbook (agent-agnostic, DIP-compliant)
 - Principle added to global CLAUDE.md: every project must maintain a `PROJECT_LOG.md`
 - Decision: this is NOT a release changelog — it is the day-to-day operational journal
+
+### Heartbeat workflow
+
+- **Issue #9** created — daily heartbeat Telegram notification
+- Heartbeat workflow built in n8n UI: Schedule Trigger (07:55 daily) → Send Telegram ("n8n is alive")
+- Workflow published and active in n8n
+- Exported to `workflows/heartbeat.json`
+- PR review comment procedure updated in global CLAUDE.md: added "Disagree" priority, duplicate grouping, re-fetch cycle, and "do NOT resolve conversations" rule
