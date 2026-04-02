@@ -24,6 +24,7 @@ Always branch from `main`. Never commit directly to `main`.
 **Scopes:** `n8n`, `rules`, `docker`, `ci`, `docs`
 
 **Examples:**
+
 ```
 feat(n8n): add Telegram notification node
 fix(rules): correct track matching logic
