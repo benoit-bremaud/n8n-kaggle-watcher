@@ -84,3 +84,9 @@ This is the operational logbook, not a release changelog.
 - **PR #13** merged — social preview HTML template (`docs/social-preview.html`), dark theme 1280x640, uploaded to GitHub Settings
 - **PR #14** merged — fix PR #13 Copilot review comments (HTML entity escape, emoji fonts, capture procedure documentation)
 - **Issue #4** closed
+
+### CI lint checks (in progress)
+
+- Branch `feat/ci-lint-checks` created — adding yamllint, shellcheck, markdownlint to CI
+- Tools installed locally: yamllint (pipx), shellcheck (binary), markdownlint-cli2 (npx)
+- Remaining: update validate script, add `make lint`, update CI workflow
