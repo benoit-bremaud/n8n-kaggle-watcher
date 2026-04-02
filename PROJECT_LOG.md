@@ -85,8 +85,15 @@ This is the operational logbook, not a release changelog.
 - **PR #14** merged — fix PR #13 Copilot review comments (HTML entity escape, emoji fonts, capture procedure documentation)
 - **Issue #4** closed
 
-### CI lint checks (in progress)
+### CI lint checks
 
-- Branch `feat/ci-lint-checks` created — adding yamllint, shellcheck, markdownlint to CI
-- Tools installed locally: yamllint (pipx), shellcheck (binary), markdownlint-cli2 (npx)
-- Remaining: update validate script, add `make lint`, update CI workflow
+- **PR #15** merged — yamllint, shellcheck, markdownlint added to CI and local `make lint` / `make check`
+- Copilot review: 2 comments addressed (blocking on missing tools, markdown lint consistency)
+
+### Security audit and secret detection
+
+- **Repo switched to private** — hardcoded secrets found in workflow exports (chat_id, credential IDs, instance ID)
+- **PR #16** merged — gitleaks CI job (scoped to PR diff), workflow JSONs sanitized with placeholders
+- Copilot review: 2 comments addressed (gitleaks allowlist path, chat_id dynamic — deferred to #8)
+- Private-first repository policy established in global CLAUDE.md
+- New issues created for public release roadmap: #17 (git history purge), #18 (documentation), #19 (secret rotation), #20 (public release gate)
