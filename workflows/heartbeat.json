@@ -18,13 +18,13 @@
         0,
         0
       ],
-      "id": "PLACEHOLDER_NODE_ID_1",
+      "id": "57a2ef8f-7563-4f86-b4e6-030acc1426ff",
       "name": "Schedule Trigger"
     },
     {
       "parameters": {
-        "chatId": "YOUR_CHAT_ID",
-        "text": "✅ n8n is alive — Kaggle watcher active, next poll at 08:00",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "\u2705 n8n is alive \u2014 Kaggle watcher active, next poll at 08:00",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
@@ -32,10 +32,10 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        208,
+        672,
         0
       ],
-      "id": "PLACEHOLDER_NODE_ID_2",
+      "id": "15036d1a-df15-4618-8ca8-08c82717e0d0",
       "name": "Send a text message",
       "credentials": {
         "telegramApi": {
@@ -43,11 +43,60 @@
           "name": "Telegram account"
         }
       }
+    },
+    {
+      "parameters": {
+        "fileSelector": "/data/rules/telegram-config.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "01468c8b-52af-4e28-94ee-46bb8cfa843a",
+      "name": "Read Config"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read telegram config from binary data\nconst configBinary = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst config = JSON.parse(configBinary.toString());\nconst chatId = String(config.default_chat_id || '');\n\nreturn [{\n  json: {\n    chat_id: chatId\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "56d8ed96-5b15-4f7f-a8e0-9a41a143f5ea",
+      "name": "Inject Chat ID"
     }
   ],
   "pinData": {},
   "connections": {
     "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Config": {
+      "main": [
+        [
+          {
+            "node": "Inject Chat ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inject Chat ID": {
       "main": [
         [
           {
@@ -59,9 +108,11 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
+  "meta": {},
   "tags": []
 }
