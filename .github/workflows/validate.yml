@@ -1,11 +1,8 @@
-name: Validate JSON
+name: Validate & Lint
 
 on:
   pull_request:
     branches: [main]
-    paths:
-      - "rules/**"
-      - "workflows/**"
 
 jobs:
   validate:
@@ -27,5 +24,28 @@ jobs:
           print('actions.json is valid')
           "
 
-      - name: Validate n8n workflow JSON syntax
-        run: python3 -c "import json; json.load(open('workflows/kaggle-email-watcher.json')); print('workflow JSON is valid')"
+      - name: Validate all workflow JSON syntax
+        run: |
+          for wf in workflows/*.json; do
+            python3 -c "import json; json.load(open('$wf')); print('$wf is valid')"
+          done
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: YAML lint
+        run: |
+          pip install yamllint
+          yamllint -d relaxed docker/docker-compose.yml
+
+      - name: Shell lint
+        run: shellcheck scripts/*.sh
+
+      - name: Markdown lint
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: "*.md"
+          config: ".markdownlint.json"

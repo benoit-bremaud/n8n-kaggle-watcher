@@ -14,13 +14,16 @@ else
   exit 1
 fi
 
-# Check workflow JSON syntax
-if python3 -c "import json; json.load(open('$PROJECT_ROOT/workflows/kaggle-email-watcher.json'))"; then
-  echo "✓ kaggle-email-watcher.json is valid JSON"
-else
-  echo "✗ kaggle-email-watcher.json has invalid JSON syntax"
-  exit 1
-fi
+# Check all workflow JSON syntax
+for wf in "$PROJECT_ROOT"/workflows/*.json; do
+  name=$(basename "$wf")
+  if python3 -c "import json; json.load(open('$wf'))"; then
+    echo "✓ $name is valid JSON"
+  else
+    echo "✗ $name has invalid JSON syntax"
+    exit 1
+  fi
+done
 
 # Validate against schema (if jsonschema is available)
 if python3 -c "
