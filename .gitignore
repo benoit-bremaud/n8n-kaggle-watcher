@@ -2,6 +2,9 @@
 .env
 docker/.env
 
+# Telegram config (contains chat_id)
+rules/telegram-config.json
+
 # n8n data
 n8n_data/
 
