@@ -18,7 +18,7 @@
         0,
         0
       ],
-      "id": "57a2ef8f-7563-4f86-b4e6-030acc1426ff",
+      "id": "PLACEHOLDER_NODE_ID_1",
       "name": "Schedule Trigger"
     },
     {
@@ -35,9 +35,8 @@
         208,
         0
       ],
-      "id": "15036d1a-df15-4618-8ca8-08c82717e0d0",
+      "id": "PLACEHOLDER_NODE_ID_2",
       "name": "Send a text message",
-      "webhookId": "WEBHOOK_ID",
       "credentials": {
         "telegramApi": {
           "id": "YOUR_CREDENTIAL_ID",
@@ -62,14 +61,7 @@
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate"
+    "executionOrder": "v1"
   },
-  "versionId": "2c1228a8-da37-414d-9ad3-9bb2d63cca6f",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "INSTANCE_ID"
-  },
-  "id": "WORKFLOW_ID",
   "tags": []
 }
