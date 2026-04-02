@@ -4,5 +4,5 @@ useDefault = true
 [allowlist]
 paths = [
   ".gitleaks.toml",
-  ".env.example"
+  "docker/.env.example"
 ]
