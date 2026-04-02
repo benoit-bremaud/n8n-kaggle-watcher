@@ -97,3 +97,12 @@ This is the operational logbook, not a release changelog.
 - Copilot review: 2 comments addressed (gitleaks allowlist path, chat_id dynamic — deferred to #8)
 - Private-first repository policy established in global CLAUDE.md
 - New issues created for public release roadmap: #17 (git history purge), #18 (documentation), #19 (secret rotation), #20 (public release gate)
+
+### Dynamic chat_id resolution (Issue #8)
+
+- `$env.TELEGRAM_CHAT_ID` blocked by n8n CE (even with `N8N_RESTRICT_ENVIRONMENT_VARIABLES_TO`)
+- Solution: external config file `rules/telegram-config.json` (gitignored) read by a dedicated Code node
+- Architecture: Match Rule → Read Config → Inject Chat ID → Route → Send Telegram
+- Both workflows (Kaggle Email Watcher + Heartbeat) now use dynamic chat_id from config file
+- Zero hardcoded secrets in workflow JSONs — all credential IDs, instance IDs, and metadata sanitized
+- `make check` passes (JSON validation + lint + secret detection)
