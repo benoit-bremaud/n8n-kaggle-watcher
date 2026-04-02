@@ -15,7 +15,8 @@ if command -v yamllint &>/dev/null; then
     ERRORS=$((ERRORS + 1))
   fi
 else
-  echo "⚠ yamllint not installed (pipx install yamllint)"
+  echo "✗ yamllint not installed (pipx install yamllint)"
+  ERRORS=$((ERRORS + 1))
 fi
 
 echo ""
@@ -31,7 +32,8 @@ if command -v shellcheck &>/dev/null; then
     fi
   done
 else
-  echo "⚠ shellcheck not installed"
+  echo "✗ shellcheck not installed"
+  ERRORS=$((ERRORS + 1))
 fi
 
 echo ""
@@ -41,10 +43,12 @@ if command -v npx &>/dev/null; then
   if npx --yes markdownlint-cli2 --config .markdownlint.json README.md CONTRIBUTING.md PROJECT_LOG.md 2>&1; then
     echo "✓ Markdown files pass lint"
   else
-    echo "⚠ Markdown lint warnings (non-blocking)"
+    echo "✗ Markdown files have lint errors"
+    ERRORS=$((ERRORS + 1))
   fi
 else
-  echo "⚠ npx not available — skipping markdown lint"
+  echo "✗ npx not available — cannot run markdown lint"
+  ERRORS=$((ERRORS + 1))
 fi
 
 echo ""
