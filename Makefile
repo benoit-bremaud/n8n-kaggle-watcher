@@ -1,4 +1,4 @@
-.PHONY: up down logs validate help
+.PHONY: up down logs validate lint check help
 
 COMPOSE := docker compose -f docker/docker-compose.yml --env-file docker/.env
 
@@ -17,3 +17,8 @@ logs: ## Show n8n logs (follow mode)
 
 validate: ## Validate JSON files (rules + workflow)
 	@bash scripts/validate-rules.sh
+
+lint: ## Run linters (yaml, shell, markdown)
+	@bash scripts/lint.sh
+
+check: validate lint ## Run all checks (validate + lint)
