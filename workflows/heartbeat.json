@@ -18,12 +18,12 @@
         0,
         0
       ],
-      "id": "57a2ef8f-7563-4f86-b4e6-030acc1426ff",
+      "id": "PLACEHOLDER_NODE_ID_1",
       "name": "Schedule Trigger"
     },
     {
       "parameters": {
-        "chatId": "899627563",
+        "chatId": "YOUR_CHAT_ID",
         "text": "✅ n8n is alive — Kaggle watcher active, next poll at 08:00",
         "additionalFields": {
           "parse_mode": "Markdown"
@@ -35,12 +35,11 @@
         208,
         0
       ],
-      "id": "15036d1a-df15-4618-8ca8-08c82717e0d0",
+      "id": "PLACEHOLDER_NODE_ID_2",
       "name": "Send a text message",
-      "webhookId": "baac3b5b-8d4b-4262-9260-0c3e73fb6040",
       "credentials": {
         "telegramApi": {
-          "id": "MoBZkdwcMf6InLvh",
+          "id": "YOUR_CREDENTIAL_ID",
           "name": "Telegram account"
         }
       }
@@ -62,14 +61,7 @@
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate"
+    "executionOrder": "v1"
   },
-  "versionId": "2c1228a8-da37-414d-9ad3-9bb2d63cca6f",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "f9bfe6cd1c79dd7cb9de6726ece7dec9954ca6bb6d178ebc8bb99344cc2fe7b3"
-  },
-  "id": "UHkR4VXAwawL3avY",
   "tags": []
 }
