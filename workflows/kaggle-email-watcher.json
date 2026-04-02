@@ -14,7 +14,7 @@
           "sender": "no-reply@kaggle.com"
         }
       },
-      "id": "08e88448-1c0a-448e-9d5f-649da6f12ede",
+      "id": "PLACEHOLDER_GMAIL_TRIGGER",
       "name": "Gmail Trigger",
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1,
@@ -24,7 +24,7 @@
       ],
       "credentials": {
         "gmailOAuth2": {
-          "id": "H7OQ6QxEqOZPzBKm",
+          "id": "YOUR_CREDENTIAL_ID",
           "name": "Gmail account"
         }
       }
@@ -41,7 +41,7 @@
           ]
         }
       },
-      "id": "4091de45-3302-4ade-947d-6f2de57477e6",
+      "id": "PLACEHOLDER_FILTER",
       "name": "Filter Kaggle Sender",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 1,
@@ -54,7 +54,7 @@
       "parameters": {
         "jsCode": "// Parse Kaggle Competition/Hackathon Launch email\n// Verified against real emails:\n//   Competition: \"Competition Launch: ARC Prize 2026\" — uses \"Entry Deadline:\"\n//   Hackathon:   \"Hackathon Launch: The MedGemma Impact Challenge\" — uses \"Final Submission:\"\nconst subject = $input.first().json.subject || '';\nconst body = $input.first().json.text || '';\nconst html = $input.first().json.html || '';\n\n// Detect event type from subject\nlet eventType = 'competition';\nif (subject.match(/Hackathon Launch/i)) {\n  eventType = 'hackathon';\n}\n\n// Extract name from subject — format: \"Competition Launch: ARC Prize 2026\"\n// Note: name can contain colons (e.g. \"Measuring Progress Toward AGI: Cognitive Abilities\")\nconst nameMatch = subject.match(/(?:Competition|Hackathon)\\s+Launch:\\s*(.+)/i);\nconst competitionName = nameMatch ? nameMatch[1].trim() : subject;\n\n// Strip HTML tags for text search\nconst searchText = body || html.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ');\n\n// Extract deadline\n// Competition emails use \"Entry Deadline:\", Hackathon emails use \"Final Submission:\"\nconst deadlinePatterns = [\n  /Entry Deadline[:\\s]*([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /Final Submission[:\\s]*([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /Submission Deadline[:\\s]*([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /deadline[:\\s]+([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /ends?\\s+on\\s+([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i\n];\nlet deadline = 'Unknown';\nfor (const pattern of deadlinePatterns) {\n  const match = searchText.match(pattern);\n  if (match) {\n    deadline = match[1].trim();\n    break;\n  }\n}\n\n// Extract prize — format: \"Total Prizes:\" then \"$2,000,000\" or \"$100,000\"\nconst prizeMatch = searchText.match(/Total Prizes?[:\\s]*(\\$[\\d,\\.]+)/i);\nconst prize = prizeMatch ? prizeMatch[1].trim() : 'Not specified';\n\n// Extract Kaggle URL from HTML (links in <a href=\"...\">)\nconst urlPatterns = [\n  /https:\\/\\/www\\.kaggle\\.com\\/competitions\\/[^\\s\\\"'<>]+/i,\n  /https:\\/\\/www\\.kaggle\\.com\\/c\\/[^\\s\\\"'<>]+/i\n];\nlet url = 'https://www.kaggle.com/competitions';\nfor (const pattern of urlPatterns) {\n  const match = html.match(pattern) || body.match(pattern);\n  if (match) {\n    url = match[0];\n    break;\n  }\n}\n\n// Infer track from email content (Kaggle emails have no explicit track field)\n// Keywords are matched against subject + body to classify the competition\nconst content = (subject + ' ' + searchText).toLowerCase();\nconst trackKeywords = [\n  { track: 'AI/ML', keywords: ['machine learning', 'deep learning', 'neural network', 'ai model', 'llm', 'nlp', 'computer vision', 'reinforcement learning', 'agi', 'generalization', 'reasoning'] },\n  { track: 'Data Science', keywords: ['data science', 'tabular', 'regression', 'classification', 'analytics', 'feature engineering', 'eda'] },\n  { track: 'Healthcare', keywords: ['medical', 'health', 'clinical', 'patient', 'diagnostics', 'biomedical', 'medgemma'] },\n  { track: 'Environment', keywords: ['climate', 'wildlife', 'biodiversity', 'species', 'bird', 'ecology', 'environmental'] }\n];\nlet track = 'Other';\nfor (const entry of trackKeywords) {\n  if (entry.keywords.some(kw => content.includes(kw))) {\n    track = entry.track;\n    break;\n  }\n}\n\nreturn [{\n  json: {\n    event_type: eventType,\n    competition_name: competitionName,\n    deadline: deadline,\n    prize: prize,\n    track: track,\n    url: url,\n    raw_subject: subject\n  }\n}];"
       },
-      "id": "a14bb4a1-7bf4-4c8f-b448-67216e0c83a9",
+      "id": "PLACEHOLDER_PARSE_EMAIL",
       "name": "Parse Email",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -68,7 +68,7 @@
         "fileSelector": "/data/rules/actions.json",
         "options": {}
       },
-      "id": "dc0aedb5-c041-44cd-b15a-fc83a569f9dc",
+      "id": "PLACEHOLDER_READ_RULES",
       "name": "Read Rules",
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
@@ -79,9 +79,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Match parsed email data against rules (supports event_type: competition/hackathon)\nconst emailData = $('Parse Email').first().json;\nconst binaryData = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst rulesFile = JSON.parse(binaryData.toString());\nconst rules = rulesFile.rules;\n\nlet matchedRule = null;\n\nfor (const rule of rules) {\n  // Check event_type match first\n  const ruleEventType = rule.match.event_type || '*';\n  if (ruleEventType !== '*' && ruleEventType !== emailData.event_type) {\n    continue;\n  }\n  \n  const tracks = rule.match.track;\n  \n  // Check track match\n  let trackMatch = false;\n  if (tracks.includes('*')) {\n    trackMatch = true;\n  } else {\n    const emailTrack = emailData.track.toLowerCase();\n    trackMatch = tracks.some(t => emailTrack.includes(t.toLowerCase()));\n  }\n  \n  if (!trackMatch) continue;\n  \n  // Check keyword match in competition name\n  let keywordMatch = true;\n  if (rule.match.keyword_in_name && rule.match.keyword_in_name.length > 0) {\n    const name = emailData.competition_name.toLowerCase();\n    keywordMatch = rule.match.keyword_in_name.some(k => name.includes(k.toLowerCase()));\n  }\n  \n  if (keywordMatch) {\n    matchedRule = rule;\n    break;\n  }\n}\n\nif (!matchedRule) {\n  matchedRule = {\n    id: 'default',\n    name: 'Default Action',\n    actions: [{ type: rulesFile.default_action, config: {} }]\n  };\n}\n\n// Merge email data with matched rule actions\nconst results = matchedRule.actions.map(action => {\n  const config = { ...action.config };\n  if (!config.chat_id) {\n    config.chat_id = '899627563';\n  }\n  return {\n    json: {\n      ...emailData,\n      action_type: action.type,\n      action_config: config,\n      matched_rule: matchedRule.name\n    }\n  };\n});\n\nreturn results;\n"
+        "jsCode": "// Match parsed email data against rules (supports event_type: competition/hackathon)\nconst emailData = $('Parse Email').first().json;\nconst binaryData = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst rulesFile = JSON.parse(binaryData.toString());\nconst rules = rulesFile.rules;\n\nlet matchedRule = null;\n\nfor (const rule of rules) {\n  // Check event_type match first\n  const ruleEventType = rule.match.event_type || '*';\n  if (ruleEventType !== '*' && ruleEventType !== emailData.event_type) {\n    continue;\n  }\n  \n  const tracks = rule.match.track;\n  \n  // Check track match\n  let trackMatch = false;\n  if (tracks.includes('*')) {\n    trackMatch = true;\n  } else {\n    const emailTrack = emailData.track.toLowerCase();\n    trackMatch = tracks.some(t => emailTrack.includes(t.toLowerCase()));\n  }\n  \n  if (!trackMatch) continue;\n  \n  // Check keyword match in competition name\n  let keywordMatch = true;\n  if (rule.match.keyword_in_name && rule.match.keyword_in_name.length > 0) {\n    const name = emailData.competition_name.toLowerCase();\n    keywordMatch = rule.match.keyword_in_name.some(k => name.includes(k.toLowerCase()));\n  }\n  \n  if (keywordMatch) {\n    matchedRule = rule;\n    break;\n  }\n}\n\nif (!matchedRule) {\n  matchedRule = {\n    id: 'default',\n    name: 'Default Action',\n    actions: [{ type: rulesFile.default_action, config: {} }]\n  };\n}\n\n// Merge email data with matched rule actions\n// NOTE: Replace YOUR_CHAT_ID with your Telegram chat ID\nconst results = matchedRule.actions.map(action => {\n  const config = { ...action.config };\n  if (!config.chat_id) {\n    config.chat_id = 'YOUR_CHAT_ID';\n  }\n  return {\n    json: {\n      ...emailData,\n      action_type: action.type,\n      action_config: config,\n      matched_rule: matchedRule.name\n    }\n  };\n});\n\nreturn results;\n"
       },
-      "id": "b5324da3-b167-46e1-8ef3-8112196c6dc7",
+      "id": "PLACEHOLDER_MATCH_RULE",
       "name": "Match Rule",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -138,7 +138,7 @@
         },
         "options": {}
       },
-      "id": "3439e081-45ee-46bc-8f10-fffac49da17f",
+      "id": "PLACEHOLDER_SWITCH",
       "name": "Route by Action Type",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
@@ -149,13 +149,13 @@
     },
     {
       "parameters": {
-        "chatId": "899627563",
-        "text": "=={{ $json.action_config.message_template ? $json.action_config.message_template.replace('{competition_name}', $json.competition_name).replace('{track}', $json.track).replace('{deadline}', $json.deadline).replace('{url}', $json.url).replace('{event_type}', $json.event_type).replace('{prize}', $json.prize) : '🔔 New ' + $json.event_type + ': ' + $json.competition_name }}",
+        "chatId": "YOUR_CHAT_ID",
+        "text": "={{ $json.action_config.message_template ? $json.action_config.message_template.replace('{competition_name}', $json.competition_name).replace('{track}', $json.track).replace('{deadline}', $json.deadline).replace('{url}', $json.url).replace('{event_type}', $json.event_type).replace('{prize}', $json.prize) : '🔔 New ' + $json.event_type + ': ' + $json.competition_name }}",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
       },
-      "id": "d6001c2e-3e3c-4bf4-93c1-a91d10e5a569",
+      "id": "PLACEHOLDER_TELEGRAM",
       "name": "Send Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
@@ -163,10 +163,9 @@
         0,
         0
       ],
-      "webhookId": "5f930ddb-cc74-4bdd-8fa3-16903d840890",
       "credentials": {
         "telegramApi": {
-          "id": "MoBZkdwcMf6InLvh",
+          "id": "YOUR_CREDENTIAL_ID",
           "name": "Telegram account"
         }
       }
@@ -175,7 +174,7 @@
       "parameters": {
         "jsCode": "// Log action for unhandled types\nconsole.log('Unhandled action type:', $json.action_type);\nconsole.log('Competition:', $json.competition_name);\nconsole.log('Matched rule:', $json.matched_rule);\nreturn [$input.first()];"
       },
-      "id": "39549557-a44c-40bb-a991-fbfdd5a9a4ad",
+      "id": "PLACEHOLDER_LOG",
       "name": "Log (Fallback)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -277,26 +276,13 @@
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate"
+    "executionOrder": "v1"
   },
-  "versionId": "8a055c40-bcd9-48b9-8734-4e8c6c0a47b2",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "f9bfe6cd1c79dd7cb9de6726ece7dec9954ca6bb6d178ebc8bb99344cc2fe7b3"
-  },
-  "id": "EPPiL2xGkRQUtGGO",
   "tags": [
     {
-      "updatedAt": "2026-03-31T13:53:18.718Z",
-      "createdAt": "2026-03-31T13:53:18.718Z",
-      "id": "WusF1fudmUgScw5G",
       "name": "kaggle"
     },
     {
-      "updatedAt": "2026-03-31T13:53:18.720Z",
-      "createdAt": "2026-03-31T13:53:18.720Z",
-      "id": "f11ZSGB6947pcHgX",
       "name": "automation"
     }
   ]
