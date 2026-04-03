@@ -115,4 +115,27 @@ This is the operational logbook, not a release changelog.
 - Secrets purged: chat_id, credential IDs, instance ID, webhook IDs, workflow IDs
 - `gitleaks detect` on full history: **no leaks found**
 - Force-pushed cleaned history to GitHub (branch protection temporarily disabled then re-enabled)
+
+### Documentation (Issue #18)
+
+- **PR #22** merged — complete rewrite of `docs/setup-n8n.md`, security checklist in CONTRIBUTING.md, README Quick Start updated
+- Copilot review: 4 comments addressed (env var scope, basic-auth wording, chat_id source of truth, checklist wording)
+
+### Secret rotation (Issue #19)
+
+- Telegram bot token rotated via @BotFather
+- Gmail OAuth credentials regenerated via Google Cloud Console
+- n8n password changed from default
+- All workflows tested and functional with new credentials
+
+### Final security audit
+
+- `gitleaks detect` on full history: **no leaks found**
+- Zero secrets in tracked files (2 false positives: documentation example + .env.example placeholder)
+- All 3 CI checks green (JSON Validation, Lint, Secret Detection)
+
+### Repository made public (Issue #20)
+
+- All prerequisites met: #8 (dynamic chat_id), #17 (history purge), #18 (docs), #19 (secret rotation)
+- Repo visibility switched from private to public
 - **Issue #17** closed
