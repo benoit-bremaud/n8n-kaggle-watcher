@@ -144,5 +144,5 @@ This is the operational logbook, not a release changelog.
 
 - Root cause: Gmail Trigger "Simplify" option was stripping the email body (text + HTML), leaving only a snippet
 - Fix: disabled Simplify, updated Filter Kaggle Sender to use `from.value[0].address` instead of `From`
-- Added URL cleanup: strip UTM query params with `.split('?')[0]` for cleaner Telegram notifications
-- Tested with real Kaggle email: "Hackathon Launch: The Gemma 4 Good Hackathon" — all fields parsed correctly (name, deadline $200k, prize May 18 2026, URL, track AI/ML)
+- Added URL cleanup: strip all query params with `.split('?')[0]` for cleaner Telegram notifications
+- Tested with real Kaggle email: "Hackathon Launch: The Gemma 4 Good Hackathon" — all fields parsed correctly (name, deadline May 18 2026, prize $200k, URL, track AI/ML)
