@@ -32,7 +32,7 @@ flowchart LR
 
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
 - Gmail account with API access ([setup guide](docs/setup-gmail-oauth.md))
-- Telegram Bot token ([setup guide](docs/setup-n8n.md#telegram))
+- Telegram Bot token ([setup guide](docs/setup-n8n.md#2-create-telegram-bot-and-get-chat-id))
 
 ## Quick Start
 
@@ -43,20 +43,17 @@ cd n8n-kaggle-watcher
 
 # 2. Configure environment
 cp docker/.env.example docker/.env
-# Edit docker/.env with your credentials
+cp rules/telegram-config.json.example rules/telegram-config.json
+# Edit both files with your credentials and chat ID
 
 # 3. Start n8n
 make up
 
-# 4. Open n8n UI
-open http://localhost:5678
-
-# 5. Import workflow
-# File → Import from file → select workflows/kaggle-email-watcher.json
-
-# 6. Configure credentials in n8n
-# See docs/setup-gmail-oauth.md and docs/setup-n8n.md
+# 4. Open n8n UI and import workflows
+# See docs/setup-n8n.md for step-by-step instructions
 ```
+
+For the complete setup guide including Gmail OAuth, Telegram bot creation, workflow import, and credential configuration, see [docs/setup-n8n.md](docs/setup-n8n.md).
 
 ## Rules Configuration
 
