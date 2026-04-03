@@ -106,3 +106,13 @@ This is the operational logbook, not a release changelog.
 - Both workflows (Kaggle Email Watcher + Heartbeat) now use dynamic chat_id from config file
 - Zero hardcoded secrets in workflow JSONs — all credential IDs, instance IDs, and metadata sanitized
 - `make check` passes (JSON validation + lint + secret detection)
+
+## 2026-04-03
+
+### Git history purge (Issue #17)
+
+- Used `git filter-repo` to replace 8 secret values across all 46 commits with placeholders
+- Secrets purged: chat_id, credential IDs, instance ID, webhook IDs, workflow IDs
+- `gitleaks detect` on full history: **no leaks found**
+- Force-pushed cleaned history to GitHub (branch protection temporarily disabled then re-enabled)
+- **Issue #17** closed
