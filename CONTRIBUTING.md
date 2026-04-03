@@ -108,7 +108,7 @@ Before making the repository public, **all** of the following must be verified:
 - [ ] `gitleaks detect --source . --verbose` passes on full git history (zero findings)
 - [ ] No secrets in any tracked file: tokens, API keys, chat IDs, credential IDs, passwords
 - [ ] `docker/.env.example` has placeholder values only
-- [ ] `rules/telegram-config.json.example` has placeholder values only
+- [ ] `rules/telegram-config.json.example` contains only non-sensitive dummy values
 - [ ] All development secrets rotated (Telegram bot token, Gmail OAuth, n8n password)
 - [ ] CI includes a secret detection job (gitleaks)
 - [ ] `make check` passes (JSON validation + lint)

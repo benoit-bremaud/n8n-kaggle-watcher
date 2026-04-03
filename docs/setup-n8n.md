@@ -16,18 +16,20 @@ cp docker/.env.example docker/.env
 Edit `docker/.env` with your values:
 
 ```bash
-# n8n admin credentials
+# n8n basic-auth credentials (used to access the n8n UI)
 N8N_USER=admin
 N8N_PASSWORD=your-strong-password
 
-# Gmail OAuth2 (from Google Cloud Console)
-GMAIL_CLIENT_ID=your-client-id
-GMAIL_CLIENT_SECRET=your-client-secret
-
-# Telegram Bot
-TELEGRAM_BOT_TOKEN=your-bot-token
-TELEGRAM_CHAT_ID=your-chat-id
+# Gmail OAuth2 and Telegram credentials are configured directly
+# in the n8n UI (see steps 5 and 6 below), not via environment
+# variables. The following are kept here for reference only:
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
 ```
+
+> **Note:** The workflows read the Telegram chat ID from `rules/telegram-config.json`, not from `docker/.env`. The `TELEGRAM_CHAT_ID` entry in `.env` is for reference only.
 
 ## 2. Create Telegram Bot and Get Chat ID
 
@@ -72,7 +74,7 @@ Edit `rules/telegram-config.json` with your chat ID:
 make up
 ```
 
-Open the UI at [http://localhost:5678](http://localhost:5678). On first launch, create an owner account with the credentials from `docker/.env`.
+Open the UI at [http://localhost:5678](http://localhost:5678). On first launch, log in with the basic-auth credentials from `docker/.env`, then complete the n8n owner-account onboarding (using the same credentials or different ones).
 
 ## 4. Import Workflows
 
