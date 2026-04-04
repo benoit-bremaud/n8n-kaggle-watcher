@@ -15,16 +15,21 @@ flowchart LR
         A[Gmail] -->|Competition/Hackathon Launch| B[n8n Trigger]
         B --> C[Filter: kaggle.com]
         C --> D[Parse Email]
-        D --> E[Read rules/actions.json]
+        D --> E[Read Rules]
         E --> F[Match Rule]
-        F -->|telegram| G[Telegram Bot]
-        F -->|discord| H[Discord Webhook]
-        F -->|notion| I[Notion API]
-        F -->|google_sheet| J[Google Sheets]
+        F --> G[Read Config]
+        G --> H[Inject Chat ID]
+        H --> I[Route by Action Type]
+        I -->|telegram| J[Telegram Bot]
+        I -->|discord| K[Discord Webhook]
+        I -->|notion| L[Notion API]
+        I -->|google_sheet| M[Google Sheets]
     end
 
     subgraph Heartbeat
-        K[Schedule: 07:55] --> L[Telegram: n8n is alive]
+        N[Schedule: 07:55] --> O[Read Config]
+        O --> P[Inject Chat ID]
+        P --> Q[Telegram: n8n is alive]
     end
 ```
 
@@ -113,6 +118,8 @@ Available in `message_template`:
 ```bash
 make help       # Show available commands
 make validate   # Validate JSON files
+make lint       # Run linters (YAML, shell, markdown)
+make check      # Run all checks (validate + lint)
 make up         # Start n8n
 make down       # Stop n8n
 make logs       # Follow n8n logs
@@ -120,10 +127,11 @@ make logs       # Follow n8n logs
 
 ## CI
 
-GitHub Actions validates JSON files on every PR to `main`:
+GitHub Actions runs 3 jobs on every PR to `main`:
 
-- `rules/actions.json` is validated against `rules/actions.schema.json`
-- `workflows/kaggle-email-watcher.json` syntax is checked
+- **JSON Validation** — `rules/actions.json` validated against schema, all `workflows/*.json` syntax-checked
+- **Lint** — yamllint, shellcheck, markdownlint
+- **Secret Detection** — gitleaks scans PR diff for leaked credentials
 
 ## License
 
