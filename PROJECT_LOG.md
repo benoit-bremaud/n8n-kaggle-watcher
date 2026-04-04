@@ -146,3 +146,31 @@ This is the operational logbook, not a release changelog.
 - Fix: disabled Simplify, updated Filter Kaggle Sender to use `from.value[0].address` instead of `From`
 - Added URL cleanup: strip all query params with `.split('?')[0]` for cleaner Telegram notifications
 - Tested with real Kaggle email: "Hackathon Launch: The Gemma 4 Good Hackathon" — all fields parsed correctly (name, deadline May 18 2026, prize $200k, URL, track AI/ML)
+
+---
+
+## Milestone v1.0 closed — Workflow fonctionnel + publication
+
+All v1.0 issues closed (10/10). Repo public, workflows operational, post LinkedIn scheduled.
+
+## 2026-04-04
+
+### Roadmap planning
+
+- Created GitHub milestones: v1.0 (closed), v1.1, v2.0
+- LinkedIn post standards established in global CLAUDE.md (data-backed: Sprout Social, Social Insider)
+- Post LinkedIn drafted, programmed for Tuesday 11h
+- LinkedIn debrief cycle defined (48h + 1 week)
+
+### Backlog update — Milestone v1.1 (Fiabilisation + automatisation)
+
+- **Issue #2** — LinkedIn post (programmed)
+- **Issue #3** — X/Twitter tweet thread
+- **Issue #25** — Add "Launch" subject filter to Gmail Trigger (priority: high)
+- **Issue #26** — LinkedIn debrief reminder workflow via n8n + Telegram
+
+### Backlog update — Milestone v2.0 (Telegram interactif)
+
+- **Issue #27** — Inline keyboard buttons in Telegram notifications (blocked by infra)
+- **Issue #28** — Automated Kaggle repo creation from Telegram (depends on #27)
+- **Issue #29** — AI-powered competition analysis and backlog generation (depends on #28)
