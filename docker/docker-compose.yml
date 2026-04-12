@@ -2,12 +2,8 @@ services:
   n8n:
     image: n8nio/n8n:latest
     restart: unless-stopped
-    ports:
-      - "5678:5678"
+    network_mode: host
     environment:
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
       - GENERIC_TIMEZONE=Europe/Paris
       - TZ=Europe/Paris
       - N8N_RESTRICT_FILE_ACCESS_TO=/data/rules
@@ -15,11 +11,6 @@ services:
     volumes:
       - n8n_data:/home/node/.n8n
       - ../rules:/data/rules:ro
-    networks:
-      - n8n-net
 
 volumes:
   n8n_data:
-
-networks:
-  n8n-net:
