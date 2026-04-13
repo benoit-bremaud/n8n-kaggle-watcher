@@ -16,10 +16,6 @@ cp docker/.env.example docker/.env
 Edit `docker/.env` with your values:
 
 ```bash
-# n8n basic-auth credentials (used to access the n8n UI)
-N8N_USER=admin
-N8N_PASSWORD=your-strong-password
-
 # Gmail OAuth2 and Telegram credentials are configured directly
 # in the n8n UI (see steps 5 and 6 below), not via environment
 # variables. The following are kept here for reference only:
@@ -29,7 +25,30 @@ TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
 ```
 
+> **Authentication:** n8n v1.0+ uses built-in user management. On first launch, the UI prompts you to create an owner account — no env vars needed. The deprecated `N8N_BASIC_AUTH_*` variables are silently ignored by modern n8n versions.
+>
 > **Note:** The workflows read the Telegram chat ID from `rules/telegram-config.json`, not from `docker/.env`. The `TELEGRAM_CHAT_ID` entry in `.env` is for reference only.
+
+## Network Mode
+
+This deployment uses `network_mode: host` in `docker-compose.yml`. n8n binds directly to the host's port 5678.
+
+**Why host mode:**
+
+- Works around an `iptables-nft` conflict on some Linux hosts where Docker cannot create custom bridge networks (`DOCKER-ISOLATION-STAGE-2` chain missing).
+- Simpler setup for a single-container deployment.
+
+**Tradeoffs:**
+
+- **Linux only.** Host networking behaves differently on Docker Desktop for macOS/Windows — the container shares the host's network namespace on Linux, but Docker Desktop emulates this via a VM layer. On macOS/Windows you may need to switch to bridge mode.
+- **No network isolation.** The container shares the host's network stack. Acceptable here because n8n is the only service and runs on a trusted host.
+
+**To switch back to bridge networking** (e.g., on macOS/Windows, or if you don't hit the iptables issue), replace `network_mode: host` with:
+
+```yaml
+ports:
+  - "5678:5678"
+```
 
 ## 2. Create Telegram Bot and Get Chat ID
 
@@ -74,7 +93,7 @@ Edit `rules/telegram-config.json` with your chat ID:
 make up
 ```
 
-Open the UI at [http://localhost:5678](http://localhost:5678). On first launch, log in with the basic-auth credentials from `docker/.env`, then complete the n8n owner-account onboarding (using the same credentials or different ones).
+Open the UI at [http://localhost:5678](http://localhost:5678). On first launch, n8n prompts you to create an owner account (email + password) via its built-in user management.
 
 ## 4. Import Workflows
 
