@@ -174,3 +174,15 @@ All v1.0 issues closed (10/10). Repo public, workflows operational, post LinkedI
 - **Issue #27** — Inline keyboard buttons in Telegram notifications (blocked by infra)
 - **Issue #28** — Automated Kaggle repo creation from Telegram (depends on #27)
 - **Issue #29** — AI-powered competition analysis and backlog generation (depends on #28)
+
+## 2026-04-12
+
+### Fix — Docker network incident
+
+- Incident: n8n editor unreachable from host (HTTP 000), Gmail Trigger failing with `'undefined'` error, outbound connectivity broken from container (100% packet loss on custom bridge network).
+- Root cause: `iptables-nft` conflict with Docker — `DOCKER-ISOLATION-STAGE-2` chain missing, preventing any custom bridge network from being created. Neither Docker daemon restart nor manual chain creation resolved it.
+- Fix: switched `docker-compose.yml` to `network_mode: host` — bypasses Docker bridge networking entirely, appropriate for this single-container deployment. n8n now binds directly to host port 5678.
+- Tradeoffs of host mode: Linux-only behavior (Docker Desktop on macOS/Windows emulates via VM and may not expose the port identically), and the container shares the host's network namespace so there is no network isolation. Acceptable here: single-container deployment on a trusted Linux host. Bridge mode remains a drop-in alternative for other environments (see `docs/setup-n8n.md`).
+- Also removed deprecated `N8N_BASIC_AUTH_*` environment variables (removed in n8n v1.0, silently ignored by v2.14.2). Auth is now managed via n8n built-in user management.
+- Verified: container up, outbound connectivity OK, editor returns HTTP 200, Heartbeat workflow active and firing.
+- Remaining: Gmail OAuth refresh token is expired/revoked (independent of network incident) — requires re-authentication via Google Cloud Console.
