@@ -13,7 +13,7 @@
         "simple": false,
         "filters": {
           "sender": "no-reply@kaggle.com",
-          "q": "subject:Launch"
+          "q": "(subject:\"Competition Launch\" OR subject:\"Hackathon Launch\")"
         },
         "options": {}
       },

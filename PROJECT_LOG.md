@@ -220,5 +220,5 @@ All v1.0 issues closed (10/10). Repo public, workflows operational, post LinkedI
 
 - Symptom: the Parse Email node occasionally produced empty fields because non-Launch Kaggle emails (newsletters, community digests, product announcements) were also passing through the trigger.
 - Root cause: the Gmail Trigger only filtered on sender (`no-reply@kaggle.com`), not on subject. All Kaggle emails were pulled in, and the parser happily returned `Unknown`/`Not specified` for anything that wasn't a Launch announcement.
-- Fix: added `q: "subject:Launch"` to the Gmail Trigger's `filters` object. Gmail's search syntax is case-insensitive and matches both `"Competition Launch"` and `"Hackathon Launch"` subjects while rejecting everything else.
+- Fix: added `q: '(subject:"Competition Launch" OR subject:"Hackathon Launch")'` to the Gmail Trigger's `filters` object. Quoted phrase matching ensures only those two exact subjects reach the parser; broader forms like `subject:Launch` would still let through product-launch announcements and similar noise.
 - Committed in `workflows/kaggle-email-watcher.json` on branch `fix/gmail-subject-filter-launch` — will need a re-import in n8n UI after merge to take effect on the running workflow.
