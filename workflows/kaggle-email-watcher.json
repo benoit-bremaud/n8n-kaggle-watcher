@@ -12,7 +12,8 @@
         },
         "simple": false,
         "filters": {
-          "sender": "no-reply@kaggle.com"
+          "sender": "no-reply@kaggle.com",
+          "q": "(subject:\"Competition Launch\" OR subject:\"Hackathon Launch\")"
         },
         "options": {}
       },
