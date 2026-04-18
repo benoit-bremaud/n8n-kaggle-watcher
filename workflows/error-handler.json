@@ -28,7 +28,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const configBinary = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst config = JSON.parse(configBinary.toString());\nconst chatId = String(config.default_chat_id || '');\n\nconst error = $('Error Trigger').first().json;\n\nreturn [{\n  json: {\n    chat_id: chatId,\n    text: `⚠️ *Workflow error*\\n\\n*Workflow:* ${error.workflow.name}\\n*Node:* ${error.execution.lastNodeExecuted}\\n*Error:* ${error.execution.error.message}\\n\\n_${new Date().toLocaleString('fr-FR', {timeZone: 'Europe/Paris'})}_`\n  }\n}];\n"
+        "jsCode": "const configBinary = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst config = JSON.parse(configBinary.toString());\nconst chatId = String(config.default_chat_id || '');\n\nconst error = $('Error Trigger').first().json;\n\n// Escape legacy Markdown control chars (_ * ` [) in interpolated values so\n// error strings containing backticks or brackets don't break Telegram parsing.\nconst esc = (s) => String(s ?? '').replace(/([_*`\\[])/g, '\\\\$1');\n\nconst workflowName = esc(error.workflow?.name);\nconst nodeName = esc(error.execution?.lastNodeExecuted);\nconst errorMsg = esc(error.execution?.error?.message);\nconst ts = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });\n\nreturn [{\n  json: {\n    chat_id: chatId,\n    text: `⚠️ *Workflow error*\\n\\n*Workflow:* ${workflowName}\\n*Node:* ${nodeName}\\n*Error:* ${errorMsg}\\n\\n_${ts}_`\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

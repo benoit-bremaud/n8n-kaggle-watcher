@@ -152,7 +152,7 @@
     {
       "parameters": {
         "chatId": "={{ $json.action_config.chat_id }}",
-        "text": "=={{ $json.action_config.message_template ? $json.action_config.message_template.replace('{competition_name}', $json.competition_name).replace('{track}', $json.track).replace('{deadline}', $json.deadline).replace('{url}', $json.url).replace('{event_type}', $json.event_type).replace('{prize}', $json.prize) : '🔔 New ' + $json.event_type + ': ' + $json.competition_name }}",
+        "text": "={{ $json.action_config.message_template ? $json.action_config.message_template.replace('{competition_name}', $json.competition_name).replace('{track}', $json.track).replace('{deadline}', $json.deadline).replace('{url}', $json.url).replace('{event_type}', $json.event_type).replace('{prize}', $json.prize) : '🔔 New ' + $json.event_type + ': ' + $json.competition_name }}",
         "additionalFields": {
           "appendAttribution": false,
           "parse_mode": "Markdown"

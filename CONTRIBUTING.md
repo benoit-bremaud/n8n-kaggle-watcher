@@ -133,7 +133,7 @@ Alternative: export a single workflow via the n8n UI (menu `⋮` → Download).
 
 Before committing, verify the exported JSON does **not** contain:
 
-- Real chat IDs (numeric values like `YOUR_CHAT_ID_EXAMPLE`)
+- Real chat IDs (numeric values, e.g. a 9-10 digit integer like `123456789`)
 - Real credential IDs (alphanumeric strings in `credentials.*.id`)
 - Real webhook IDs (`webhookId` field on trigger / Telegram nodes)
 - Real workflow IDs (`settings.errorWorkflow` references)
