@@ -186,3 +186,32 @@ All v1.0 issues closed (10/10). Repo public, workflows operational, post LinkedI
 - Also removed deprecated `N8N_BASIC_AUTH_*` environment variables (removed in n8n v1.0, silently ignored by v2.14.2). Auth is now managed via n8n built-in user management.
 - Verified: container up, outbound connectivity OK, editor returns HTTP 200, Heartbeat workflow active and firing.
 - Remaining: Gmail OAuth refresh token is expired/revoked (independent of network incident) — requires re-authentication via Google Cloud Console.
+
+## 2026-04-13
+
+### Fix — Gmail OAuth re-authentication
+
+- Root cause: Google OAuth app was in "Testing" mode — refresh tokens expire after 7 days automatically.
+- Fix: switched OAuth app to "In production" in Google Cloud Console (Audience → Publish). Tokens no longer expire.
+- Re-authenticated Gmail credential in n8n UI (Sign in with Google → Connection successful).
+- Verified end-to-end: workflow executed, Telegram notification received with correct parsed fields (name, deadline, prize, URL, track AI/ML, rule matched 🏆).
+- Workflow republished as v3.0.1. Both Kaggle Email Watcher and Heartbeat active and error-free.
+
+## 2026-04-19
+
+### Feature — Global Error Handler workflow (Issue #39)
+
+- Motivation: both production workflows (Kaggle Email Watcher, Heartbeat) ran silently — a failure was only visible in the n8n Executions tab. No alert path existed for DNS hiccups, Gmail OAuth expiry, Telegram rate-limits, or broken rules files.
+- New workflow `Error Handler` added (`workflows/error-handler.json`): Error Trigger → Read/Write Files (reads `/data/rules/telegram-config.json`) → Code node (extracts `chat_id`, formats `⚠️ Workflow error` Markdown message with workflow name, failing node, error message, and Europe/Paris timestamp) → Telegram Send Message.
+- DRY/SRP: one centralized handler shared by all workflows, linked via **Workflow Settings → Error Workflow**. Heartbeat and Kaggle Email Watcher both reference it.
+- Consistency pass on Telegram nodes across all 3 workflows: `Append n8n Attribution = OFF` (removes promotional footer) and `Parse Mode = Markdown (Legacy)` (matches the `*bold*` / `_italic_` syntax used in message templates; MarkdownV2 would fail on unescaped punctuation).
+- Workflows exported via `n8n export:workflow --all --published --pretty --separate`, sanitized with a dedicated `jq` filter (placeholders for `credentials.*.id`, `webhookId`, `settings.errorWorkflow`, tag metadata; `meta` emptied; top-level instance/version fields stripped).
+- Sanitization convention documented in `CONTRIBUTING.md` (canonical jq filter + list of fields to placeholder). `docs/setup-n8n.md` updated with the Error Handler import + linking procedure. README Mermaid diagram now shows the Error Handler subgraph.
+- Issue #40 opened to track the E2E production-schedule test (deferred from this PR: manual `Execute workflow` doesn't trigger Error Workflows in this n8n version, only real scheduled executions do).
+
+### Fix — Transient n8n fetch failures
+
+- Symptom: intermittent "The DNS server returned an error, perhaps the server is offline" on both Gmail Trigger and Telegram nodes while testing.
+- Diagnosis: DNS and HTTPS from the container are fine (Node `dns.resolve` + `https.get` to Gmail/Telegram both succeed); n8n logs show `fetch failed` / `DOMException TimeoutError` on PostHog feature-flag fetches — internal undici socket/keep-alive state got stale.
+- Fix: `docker compose restart n8n` flushes the socket pool and DNS cache. Editor back at HTTP 200, nodes retry cleanly.
+- No code change required — documented here so the symptom is recognizable next time.

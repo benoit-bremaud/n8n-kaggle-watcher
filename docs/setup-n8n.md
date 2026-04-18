@@ -97,7 +97,7 @@ Open the UI at [http://localhost:5678](http://localhost:5678). On first launch, 
 
 ## 4. Import Workflows
 
-Two workflows need to be imported:
+Three workflows need to be imported:
 
 ### Kaggle Email Watcher (main workflow)
 
@@ -109,6 +109,19 @@ Two workflows need to be imported:
 
 1. Click **Add workflow** → menu `⋮` → **Import from file**
 2. Select `workflows/heartbeat.json`
+
+### Error Handler (global failure alerts)
+
+1. Click **Add workflow** → menu `⋮` → **Import from file**
+2. Select `workflows/error-handler.json`
+3. Publish the workflow so it is available as a target
+
+Then link it as the error workflow of the other two:
+
+1. Open **Heartbeat** → menu `⋮` → **Settings** → **Error Workflow** → select **Error Handler** → **Save**
+2. Open **Kaggle Email Watcher** → menu `⋮` → **Settings** → **Error Workflow** → select **Error Handler** → **Save**
+
+Any failed production execution will now trigger a Telegram alert with the workflow name, failing node, error message, and timestamp (Europe/Paris).
 
 ## 5. Configure Credentials in n8n
 

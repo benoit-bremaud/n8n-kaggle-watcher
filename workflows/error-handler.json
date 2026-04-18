@@ -1,0 +1,111 @@
+{
+  "name": "Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "802de2c3-e1e6-4f14-b7b6-b93afca0d70c",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/data/rules/telegram-config.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "752e80bd-7cda-48c0-8a81-f2140152055b",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "jsCode": "const configBinary = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst config = JSON.parse(configBinary.toString());\nconst chatId = String(config.default_chat_id || '');\n\nconst error = $('Error Trigger').first().json;\n\nreturn [{\n  json: {\n    chat_id: chatId,\n    text: `⚠️ *Workflow error*\\n\\n*Workflow:* ${error.workflow.name}\\n*Node:* ${error.execution.lastNodeExecuted}\\n*Error:* ${error.execution.error.message}\\n\\n_${new Date().toLocaleString('fr-FR', {timeZone: 'Europe/Paris'})}_`\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "5dacf9e4-2d23-4483-9825-28448eaaf458",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "116995d7-045d-41e5-917b-72e321eac2f1",
+      "name": "Send a text message",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {},
+  "tags": []
+}

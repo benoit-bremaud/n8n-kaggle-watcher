@@ -31,7 +31,15 @@ flowchart LR
         O --> P[Inject Chat ID]
         P --> Q[Telegram: n8n is alive]
     end
+
+    subgraph Error Handler
+        R[Error Trigger] --> S[Read Config]
+        S --> T[Format Error Message]
+        T --> U[Telegram: ⚠️ Workflow error]
+    end
 ```
+
+Any failed production execution of **Kaggle Email Watcher** or **Heartbeat** triggers the **Error Handler** workflow, which sends a Telegram alert with the workflow name, failing node, error message, and timestamp.
 
 ## Prerequisites
 

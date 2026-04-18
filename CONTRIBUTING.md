@@ -115,12 +115,53 @@ Before making the repository public, **all** of the following must be verified:
 
 ## Workflow Export Convention
 
-When exporting workflows from n8n UI to commit in git:
+When exporting workflows from n8n to commit in git:
 
-1. Export via the n8n UI (menu `⋮` → Download)
-1. Before committing, verify the exported JSON does **not** contain:
-   - Real chat IDs (numeric values like `899627563`)
-   - Real credential IDs (alphanumeric strings in `credentials.*.id`)
-   - Instance IDs, webhook IDs, or version IDs
-1. Replace any leaked values with placeholders: `YOUR_CHAT_ID`, `YOUR_CREDENTIAL_ID`
-1. Run `make check` to validate
+### Export
+
+Preferred: export all workflows at once via the n8n CLI inside the container — this gives a clean, reproducible dump:
+
+```bash
+docker exec docker-n8n-1 sh -c 'mkdir -p /tmp/wf-export && \
+  n8n export:workflow --all --published --pretty --separate --output=/tmp/wf-export/'
+docker cp docker-n8n-1:/tmp/wf-export/. /tmp/wf-export/
+```
+
+Alternative: export a single workflow via the n8n UI (menu `⋮` → Download).
+
+### Sanitize
+
+Before committing, verify the exported JSON does **not** contain:
+
+- Real chat IDs (numeric values like `YOUR_CHAT_ID_EXAMPLE`)
+- Real credential IDs (alphanumeric strings in `credentials.*.id`)
+- Real webhook IDs (`webhookId` field on trigger / Telegram nodes)
+- Real workflow IDs (`settings.errorWorkflow` references)
+- Tag metadata (`tags[].id`, `tags[].createdAt`, `tags[].updatedAt`)
+- Instance IDs (`meta.instanceId`), version IDs, export timestamps
+
+Replace with placeholders: `YOUR_CHAT_ID`, `YOUR_CREDENTIAL_ID`, `YOUR_WEBHOOK_ID`, `YOUR_ERROR_WORKFLOW_ID`.
+
+A reference `jq` filter that produces the canonical committed shape:
+
+```jq
+{
+  name,
+  nodes: (.nodes | map(
+    if .credentials then
+      .credentials |= with_entries(.value.id = "YOUR_CREDENTIAL_ID")
+    else . end
+    | if has("webhookId") then .webhookId = "YOUR_WEBHOOK_ID" else . end
+  )),
+  pinData: (.pinData // {}),
+  connections,
+  active,
+  settings: (.settings | if has("errorWorkflow") then .errorWorkflow = "YOUR_ERROR_WORKFLOW_ID" else . end),
+  meta: {},
+  tags: ((.tags // []) | map({name}))
+}
+```
+
+### Validate
+
+Run `make check` — CI will also run gitleaks on the diff to catch any leaked secret that slipped through.
