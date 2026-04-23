@@ -196,3 +196,29 @@ make check      # Run all checks (validate + lint)
 - Check the workflow is published and active in n8n
 - Verify `rules/telegram-config.json` exists and contains your chat ID
 - Check timezone: n8n uses `Europe/Paris` (configured in docker-compose.yml)
+
+### `EAI_AGAIN` / `fetch failed` on Gmail or Telegram nodes
+
+- **Symptom**: Gmail Trigger or Telegram Send nodes fail with
+  `getaddrinfo EAI_AGAIN api.telegram.org` (or `gmail.googleapis.com`).
+  The n8n log also shows `TypeError: fetch failed` on PostHog telemetry
+  requests as a leading indicator.
+- **Root cause**: with `network_mode: host`, the container inherits the
+  host's `/etc/resolv.conf`, which points to `systemd-resolved`
+  (`127.0.0.53`). When systemd-resolved has a transient hiccup, Node's
+  c-ares resolver caches the failure for the lifetime of the process, so
+  every subsequent DNS lookup fails until the container restarts.
+- **Fix (shipped)**: `docker/resolv.conf` overrides the container's
+  resolver to Cloudflare (`1.1.1.1`) and Google (`8.8.8.8`), bypassing
+  systemd-resolved entirely. It is mounted read-only at
+  `/etc/resolv.conf` by `docker-compose.yml`. Only the n8n container is
+  affected — the host's DNS configuration is untouched.
+- **If the symptom still occurs**: run `docker compose restart n8n` as a
+  one-off, capture the logs, and open a follow-up referencing
+  [issue #43](https://github.com/benoit-bremaud/n8n-kaggle-watcher/issues/43)
+  so we can escalate to option A (Docker healthcheck + auto-restart) or
+  option D (external log watcher).
+- **After changing `docker/resolv.conf`**: a plain `docker compose
+  restart n8n` is **not** enough — the bind mount is only evaluated at
+  container create time. Use `make down && make up` (or
+  `docker compose up -d --force-recreate n8n`) to pick up the new file.
