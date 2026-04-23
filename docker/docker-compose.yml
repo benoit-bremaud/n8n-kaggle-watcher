@@ -11,6 +11,7 @@ services:
     volumes:
       - n8n_data:/home/node/.n8n
       - ../rules:/data/rules:ro
+      - ./resolv.conf:/etc/resolv.conf:ro
 
 volumes:
   n8n_data:
