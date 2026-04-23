@@ -240,7 +240,16 @@ All v1.0 issues closed (10/10). Repo public, workflows operational, post LinkedI
 - Documentation: troubleshooting section added in `docs/setup-n8n.md` with symptom, root cause, and the restart-vs-recreate caveat.
 - Copilot review addressed inline (commit `3736a89`): scoped the DNS note to `EAI_AGAIN` only (dropped misleading `ECONNRESET`), documented the split-DNS/VPN tradeoff in `docker/resolv.conf` with a commented `search` template, and corrected the restart guidance (a live edit is visible through the bind mount; `force-recreate` is only needed when the mount definition itself changes).
 
+### Fix — Docker healthcheck + autoheal sidecar (PR #50 merged, issue #43 option A)
+
+- **PR #50** merged — `chore(docker): add n8n healthcheck and autoheal sidecar` (merge commit `a4d2691`).
+- Docker `healthcheck` on the n8n service probes both local readiness (`http://localhost:5678/healthz`) and outbound connectivity (`https://1.1.1.1/`). Parameters: `interval: 60s`, `timeout: 10s`, `start_period: 60s`, `retries: 3` — detection latency ≤ 3 minutes.
+- New `autoheal` sidecar (`willfarrell/autoheal:1.2.0`) watches containers labeled `autoheal=true` (n8n carries the label) and issues a restart when Docker reports them unhealthy. Requires `/var/run/docker.sock` mount — accepted tradeoff on a single-user homelab host.
+- `restart: unless-stopped` on n8n kept unchanged — the sidecar adds the unhealthy-state recovery layer Docker restart policies do not cover on their own.
+- Outbound probe target chosen as `1.1.1.1` (not `api.telegram.org`) to decouple container health from any single downstream service's availability — a Telegram outage would otherwise trigger restart loops without restoring connectivity. Also matches the DNS resolver already configured in `docker/resolv.conf` (Cloudflare anycast).
+- Copilot review: 3 Should Have comments (`make down` semantics vs `docker compose stop`, wget timeout budget, third-party coupling) all addressed inline in commit `7a37e67`.
+
 ### Backlog follow-ups
 
-- Issue #43 remains open — options A (Docker healthcheck + auto-restart) and D (external log watcher independent of n8n) are the natural complements to close the monitoring gap exposed by this incident. Option B alone addresses the DNS root cause but does not detect a stopped container.
-- Future work: pin `n8nio/n8n` to a specific version (currently `:latest`, 2.14.2 at time of incident) — issue #43 option C.
+- Issue #43 remains open — options **C** (pin `n8nio/n8n` version, currently `:latest` / 2.14.2) and **D** (external watcher independent of Docker — the only way to detect an explicitly-stopped container, which is out of scope of A) are the remaining complements.
+- Explicit `docker compose down` / `make down` still terminates silently — this is intentional (maintenance pattern) and by design only caught by option D.
