@@ -253,3 +253,11 @@ All v1.0 issues closed (10/10). Repo public, workflows operational, post LinkedI
 
 - Issue #43 remains open — options **C** (pin `n8nio/n8n` version, currently `:latest` / 2.14.2) and **D** (external watcher independent of Docker — the only way to detect an explicitly-stopped container, which is out of scope of A) are the remaining complements.
 - Explicit `docker compose down` / `make down` still terminates silently — this is intentional (maintenance pattern) and by design only caught by option D.
+
+### Epic — Interactive Telegram decisions for Kaggle events (Issue #45)
+
+- Created epic meta-issue #45 (`epic(n8n): interactive Telegram decisions for Kaggle events`, milestone `v2.0`) to orchestrate the Yes/No flow for Kaggle competition notifications: Yes → deterministic GitHub repo bootstrap (Phase A) + AI-assisted enrichment (Phase B); No → mark Gmail email as read, edit the Telegram message in place, log the decline in `rules/watchlist.json`.
+- Audited existing children and aligned their scope: #27 narrowed to 2 buttons (Yes/No, dropped Later), #28 restricted to Phase A (deterministic scaffold, no AI), #29 locked to Claude API for Phase B, #31 actions scoped to `join`/`skip`, #32 narrowed to read-only `/status` command.
+- Created 4 new child issues: #46 (skip branch — 3 coordinated side-effects), #47 (watchlist.json schema + shared writer + validation), #48 (repo scaffold template under `templates/kaggle-repo/`), #49 (GitHub token + API access infra, routed to `v1.2` as infra prerequisite).
+- Architecture decision captured in the epic body: split Yes branch across 2 phases (n8n owns GitHub API with narrow PAT scope, Claude API owns reasoning/content generation). Rationale: token budget, failure recovery (repo exists even if AI times out), independent shipping per phase.
+- All 5 new issues added to the Kaggle GitHub Project (`PVT_kwHOB8rwIc4BSr5_`). Milestone routing unchanged: infra (ngrok #30, token #49) in `v1.2`, interactive flow in `v2.0`, AI enrichment (#29, #34) in `v1.3`.
