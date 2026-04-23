@@ -218,7 +218,9 @@ make check      # Run all checks (validate + lint)
   [issue #43](https://github.com/benoit-bremaud/n8n-kaggle-watcher/issues/43)
   so we can escalate to option A (Docker healthcheck + auto-restart) or
   option D (external log watcher).
-- **After changing `docker/resolv.conf`**: a plain `docker compose
-  restart n8n` is **not** enough — the bind mount is only evaluated at
-  container create time. Use `make down && make up` (or
-  `docker compose up -d --force-recreate n8n`) to pick up the new file.
+- **After editing `docker/resolv.conf`**: the updated file is visible
+  through the bind mount, so `docker compose restart n8n` is typically
+  enough to make n8n/Node re-read `/etc/resolv.conf`. You only need
+  `make down && make up` (or `docker compose up -d --force-recreate n8n`)
+  if you add or change the `/etc/resolv.conf` volume mount itself in
+  `docker-compose.yml`.
