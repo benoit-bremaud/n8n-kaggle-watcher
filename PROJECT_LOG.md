@@ -222,3 +222,25 @@ All v1.0 issues closed (10/10). Repo public, workflows operational, post LinkedI
 - Root cause: the Gmail Trigger only filtered on sender (`no-reply@kaggle.com`), not on subject. All Kaggle emails were pulled in, and the parser happily returned `Unknown`/`Not specified` for anything that wasn't a Launch announcement.
 - Fix: added `q: '(subject:"Competition Launch" OR subject:"Hackathon Launch")'` to the Gmail Trigger's `filters` object. Quoted phrase matching ensures only those two exact subjects reach the parser; broader forms like `subject:Launch` would still let through product-launch announcements and similar noise.
 - Committed in `workflows/kaggle-email-watcher.json` on branch `fix/gmail-subject-filter-launch` — will need a re-import in n8n UI after merge to take effect on the running workflow.
+
+## 2026-04-23
+
+### Incident — Silent n8n outage for 3 days
+
+- Symptom reported: no Telegram notifications at all (including daily 07:55 Heartbeat) for ~3 days.
+- Root cause: container `docker-n8n-1` stopped on 2026-04-20 15:45 UTC via SIGTERM (exit 0, clean shutdown — most likely a `make down` during earlier work on the DNS fix branch). Restart policy `unless-stopped` honors explicit stops and did not restart despite 5 host reboots between 2026-04-20 and 2026-04-22.
+- Precursor in logs: repeated `EAI_AGAIN` on `telemetry.n8n.io` / `us.i.posthog.com` / `api.telegram.org` — the signature of issue #43 (Node's c-ares caches `systemd-resolved` stub failures for the process lifetime).
+- Monitoring gap: the Error Handler depends on Telegram too, so the only alert path was silenced by the same DNS failure. No out-of-band detection exists — the outage was invisible from the outside.
+
+### Fix — DNS resolver override (PR #44 merged, issue #43 option B)
+
+- **PR #44** merged — `fix(docker): override container resolv.conf to bypass systemd-resolved` (merge commit `a72a90b`).
+- Mounts `docker/resolv.conf` (Cloudflare `1.1.1.1` + Google `8.8.8.8`, `options timeout:2 attempts:2`) onto `/etc/resolv.conf` inside the container. Host DNS configuration untouched.
+- Validation: `cat /etc/resolv.conf` inside container confirms override under `network_mode: host`; Node `dns.resolve4` resolves `api.telegram.org`, `gmail.googleapis.com`, `telemetry.n8n.io`, `us.i.posthog.com`; zero `EAI_AGAIN` / `fetch failed` in the 90 seconds after `make down && make up` (vs. errors within 2s on the previous run); end-to-end confirmed by a real Kaggle Competition Launch email triggering the full pipeline.
+- Documentation: troubleshooting section added in `docs/setup-n8n.md` with symptom, root cause, and the restart-vs-recreate caveat.
+- Copilot review addressed inline (commit `3736a89`): scoped the DNS note to `EAI_AGAIN` only (dropped misleading `ECONNRESET`), documented the split-DNS/VPN tradeoff in `docker/resolv.conf` with a commented `search` template, and corrected the restart guidance (a live edit is visible through the bind mount; `force-recreate` is only needed when the mount definition itself changes).
+
+### Backlog follow-ups
+
+- Issue #43 remains open — options A (Docker healthcheck + auto-restart) and D (external log watcher independent of n8n) are the natural complements to close the monitoring gap exposed by this incident. Option B alone addresses the DNS root cause but does not detect a stopped container.
+- Future work: pin `n8nio/n8n` to a specific version (currently `:latest`, 2.14.2 at time of incident) — issue #43 option C.
