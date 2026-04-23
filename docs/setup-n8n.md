@@ -171,6 +171,52 @@ make lint       # Run linters (YAML, shell, markdown)
 make check      # Run all checks (validate + lint)
 ```
 
+## Health Monitoring
+
+The `n8n` service has a Docker `healthcheck` that probes both **local**
+readiness and **outbound connectivity**:
+
+- `wget http://localhost:5678/healthz` — n8n HTTP listener is alive
+- `wget https://1.1.1.1/` — DNS resolution + outbound HTTPS work
+
+The outbound probe targets Cloudflare's `1.1.1.1` (the same resolver
+configured in `docker/resolv.conf`) rather than `api.telegram.org` to
+keep container health decoupled from any single downstream service's
+availability. n8n has its own retry/queue handling for transient
+Telegram failures; restarting the container on a Telegram outage would
+not restore connectivity and could cause a restart loop.
+
+Both must pass for the container to be `healthy`. Parameters: probe
+every `60s`, fail after `3` consecutive failures (max ~3 min detection
+latency), `60s` grace period on startup.
+
+**Inspect health status:**
+
+```bash
+docker inspect --format '{{.State.Health.Status}}' docker-n8n-1
+# starting | healthy | unhealthy
+
+docker inspect --format '{{json .State.Health}}' docker-n8n-1 | jq
+# full history of the last probes
+```
+
+**Auto-recovery via `autoheal` sidecar:** the `autoheal` service
+(`willfarrell/autoheal:1.2.0`) listens to Docker events and restarts any
+container labeled `autoheal=true` when it becomes `unhealthy`. The n8n
+service carries that label, so a stuck `EAI_AGAIN` loop, a frozen Node
+process, or a Telegram outage that lasts past the retry window will
+trigger an automatic restart with no human intervention.
+
+- Requires mounting the Docker socket (`/var/run/docker.sock`) into the
+  sidecar — acceptable on a single-user homelab host. Migrate to
+  `tecnativa/docker-socket-proxy` if the threat model tightens.
+- An explicit `make down` runs `docker compose down`, which stops and
+  removes the container entirely, so neither `restart: unless-stopped`
+  nor `autoheal` has anything left to act on. Detecting an explicitly
+  stopped-but-still-existing container (for example via
+  `docker compose stop` / `docker stop`) requires an external watcher
+  independent of Docker (tracked as issue #43 option D).
+
 ## Troubleshooting
 
 ### "chat not found" when testing Telegram
@@ -213,11 +259,13 @@ make check      # Run all checks (validate + lint)
   systemd-resolved entirely. It is mounted read-only at
   `/etc/resolv.conf` by `docker-compose.yml`. Only the n8n container is
   affected — the host's DNS configuration is untouched.
-- **If the symptom still occurs**: run `docker compose restart n8n` as a
-  one-off, capture the logs, and open a follow-up referencing
+- **If the symptom still occurs**: the `autoheal` sidecar will now
+  restart the container automatically after 3 consecutive failed
+  healthchecks (see [Health Monitoring](#health-monitoring) above).
+  Capture the logs and open a follow-up referencing
   [issue #43](https://github.com/benoit-bremaud/n8n-kaggle-watcher/issues/43)
-  so we can escalate to option A (Docker healthcheck + auto-restart) or
-  option D (external log watcher).
+  so we can escalate to option D (external log watcher independent of
+  Docker).
 - **After editing `docker/resolv.conf`**: the updated file is visible
   through the bind mount, so `docker compose restart n8n` is typically
   enough to make n8n/Node re-read `/etc/resolv.conf`. You only need
