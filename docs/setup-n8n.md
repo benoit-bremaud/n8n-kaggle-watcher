@@ -177,7 +177,14 @@ The `n8n` service has a Docker `healthcheck` that probes both **local**
 readiness and **outbound connectivity**:
 
 - `wget http://localhost:5678/healthz` — n8n HTTP listener is alive
-- `wget https://api.telegram.org/` — DNS resolution + outbound HTTPS work
+- `wget https://1.1.1.1/` — DNS resolution + outbound HTTPS work
+
+The outbound probe targets Cloudflare's `1.1.1.1` (the same resolver
+configured in `docker/resolv.conf`) rather than `api.telegram.org` to
+keep container health decoupled from any single downstream service's
+availability. n8n has its own retry/queue handling for transient
+Telegram failures; restarting the container on a Telegram outage would
+not restore connectivity and could cause a restart loop.
 
 Both must pass for the container to be `healthy`. Parameters: probe
 every `60s`, fail after `3` consecutive failures (max ~3 min detection
@@ -203,10 +210,12 @@ trigger an automatic restart with no human intervention.
 - Requires mounting the Docker socket (`/var/run/docker.sock`) into the
   sidecar — acceptable on a single-user homelab host. Migrate to
   `tecnativa/docker-socket-proxy` if the threat model tightens.
-- An explicit `make down` still honors `restart: unless-stopped` and
-  leaves the container stopped — this is intentional. Detecting an
-  explicitly stopped container requires an external watcher independent
-  of Docker (tracked as issue #43 option D).
+- An explicit `make down` runs `docker compose down`, which stops and
+  removes the container entirely, so neither `restart: unless-stopped`
+  nor `autoheal` has anything left to act on. Detecting an explicitly
+  stopped-but-still-existing container (for example via
+  `docker compose stop` / `docker stop`) requires an external watcher
+  independent of Docker (tracked as issue #43 option D).
 
 ## Troubleshooting
 
