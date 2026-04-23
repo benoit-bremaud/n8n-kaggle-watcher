@@ -249,10 +249,18 @@ All v1.0 issues closed (10/10). Repo public, workflows operational, post LinkedI
 - Outbound probe target chosen as `1.1.1.1` (not `api.telegram.org`) to decouple container health from any single downstream service's availability — a Telegram outage would otherwise trigger restart loops without restoring connectivity. Also matches the DNS resolver already configured in `docker/resolv.conf` (Cloudflare anycast).
 - Copilot review: 3 Should Have comments (`make down` semantics vs `docker compose stop`, wget timeout budget, third-party coupling) all addressed inline in commit `7a37e67`.
 
+### Fix — Pin n8n image to 2.14.2 (PR #52 merged, issue #43 option C)
+
+- **PR #52** merged — `chore(docker): pin n8n image to 2.14.2` (merge commit `f1d9924`).
+- `docker/docker-compose.yml` switched from `image: n8nio/n8n:latest` to `image: n8nio/n8n:2.14.2` — the version already running in production at the time of pinning.
+- Rationale: tracking `latest` meant any `docker compose pull` (or fresh `make up` after image removal) would silently roll forward to whatever n8n ships next, re-opening the class of transient environmental surface that triggered the 2026-04-20 incident. Future upgrades now go through an explicit version-bump PR (pin change + `make down && make up` + healthcheck validation).
+- Copilot review: summary only, 0 actionable comments.
+
 ### Backlog follow-ups
 
-- Issue #43 remains open — options **C** (pin `n8nio/n8n` version, currently `:latest` / 2.14.2) and **D** (external watcher independent of Docker — the only way to detect an explicitly-stopped container, which is out of scope of A) are the remaining complements.
+- Issue #43 option **D** remains open — external watcher independent of Docker, the only mechanism that would detect an explicitly-stopped container (the exact scenario of 2026-04-20). Options A (PR #50), B (PR #44), and C (PR #52) shipped — issue #43 stays open until D is done.
 - Explicit `docker compose down` / `make down` still terminates silently — this is intentional (maintenance pattern) and by design only caught by option D.
+- Version bump cadence for n8n will be manual for now — Renovate/Dependabot can be added later if the rhythm becomes a chore.
 
 ### Epic — Interactive Telegram decisions for Kaggle events (Issue #45)
 
