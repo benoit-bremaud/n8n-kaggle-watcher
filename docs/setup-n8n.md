@@ -311,6 +311,89 @@ make uninstall-watchdog       # removes script, units, disables timer
 rm -rf ~/.config/n8n-watchdog # only if you also want to wipe the secrets
 ```
 
+## Telegram Webhook Auto-Registration
+
+The `webhook-updater` Compose sidecar registers the Telegram Bot API
+webhook URL automatically every time the stack starts, so the
+ngrok-rotated public URL is always in sync with what Telegram knows
+about. This means inline-button `callback_query` events are routed
+back to n8n without any operator action after `make up`.
+
+How it works:
+
+1. Sidecar boots after the `ngrok` service, installs `curl` + `jq`
+   (Alpine image), then runs [`scripts/update-telegram-webhook.sh`](../scripts/update-telegram-webhook.sh).
+2. Polls `http://localhost:4040/api/tunnels` until ngrok exposes its
+   HTTPS tunnel (max 30 attempts, 2s apart).
+3. Calls Telegram `setWebhook` with the URL
+   `<ngrok-public-url>/webhook/telegram-callback` and
+   `allowed_updates=["callback_query"]` so unrelated bot updates
+   (chat messages, forwards) do not hit the handler.
+4. Verifies via `getWebhookInfo` that the URL was accepted.
+5. Exits 0; Compose stops the container cleanly.
+
+Required env (read from `docker/.env`):
+
+- `TELEGRAM_BOT_TOKEN` — same bot used by the notification workflows.
+
+Optional overrides (set as Compose env on the `webhook-updater`
+service if needed): `WEBHOOK_PATH`, `NGROK_API`, `MAX_ATTEMPTS`,
+`SLEEP_BETWEEN`. See the script header for defaults.
+
+### Verify the webhook is registered with Telegram
+
+```bash
+# Reads the bot token from docker/.env, asks Telegram what URL it has
+set -a && . docker/.env && set +a
+curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo" | jq .
+unset TELEGRAM_BOT_TOKEN
+```
+
+Expected `result.url` should be `https://<random>.ngrok-free.dev/webhook/telegram-callback`. Expected `result.allowed_updates` should be `["callback_query"]`.
+
+### Simulate a callback locally (no Telegram needed)
+
+Useful before the inline buttons (#27) ship — proves the handler
+chain works end-to-end without going through the Telegram client.
+
+```bash
+# Reach the handler through the public ngrok URL, just like Telegram would
+PUBLIC_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[] | select(.proto == "https") | .public_url')
+
+curl -is -X POST "$PUBLIC_URL/webhook/telegram-callback" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "update_id": 1,
+    "callback_query": {
+      "id": "test-callback-id",
+      "from": { "id": 1, "first_name": "Test" },
+      "data": "action=skip&competition_id=titanic"
+    }
+  }'
+```
+
+- **Before the handler workflow exists** (no Webhook node registered):
+  expect `HTTP 404` with body `{"code":404,"message":"The requested
+  webhook \"POST telegram-callback\" is not registered."}`. This still
+  proves the network path Telegram → ngrok → n8n is reachable.
+- **After the handler workflow is active**: expect `HTTP 200` and an
+  execution visible in n8n's Executions list, with the Switch node
+  routed to the right branch based on `data`.
+
+### Webhook is not being delivered to n8n
+
+Debug ladder, in order:
+
+1. `docker logs docker-webhook-updater-1` — did the sidecar succeed
+   on the last `make up`? Look for `✓ getWebhookInfo confirms URL`.
+2. `getWebhookInfo` (above) — does Telegram report a recent
+   `last_error_message`? Common ones: `Bad Request: bad webhook`
+   (URL is wrong shape), `Wrong response from the webhook` (n8n
+   workflow returned non-2xx).
+3. `docker logs docker-ngrok-1` — is the tunnel still up?
+4. Manually re-run the script:
+   `docker compose -f docker/docker-compose.yml --env-file docker/.env run --rm webhook-updater`.
+
 ## Troubleshooting
 
 ### "chat not found" when testing Telegram
