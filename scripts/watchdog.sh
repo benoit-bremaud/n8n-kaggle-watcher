@@ -89,6 +89,20 @@ clear_alert() {
   fi
 }
 
+check_docker_daemon() {
+  # Probe the daemon explicitly so we can distinguish "container is gone"
+  # from "Docker is unreachable" (daemon down, socket missing, no perms).
+  # Without this, every check below would say "container missing" — which
+  # would be misleading since the operator should restart Docker, not the
+  # container.
+  if docker info >/dev/null 2>&1; then
+    clear_alert "daemon" "✅ *n8n watchdog* — Docker daemon is reachable again."
+    return 0
+  fi
+  alert_once "daemon" "🚨 *n8n watchdog* — Docker daemon is *unreachable* (\`docker info\` failed). Container, health, and heartbeat checks were skipped this tick. Restart Docker (\`sudo systemctl restart docker\`) or check user permissions."
+  return 1
+}
+
 check_container_running() {
   local status
   status="$(docker inspect --format '{{.State.Status}}' "$CONTAINER_NAME" 2>/dev/null || echo "missing")"
@@ -104,9 +118,22 @@ check_container_health() {
   local health
   health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$CONTAINER_NAME" 2>/dev/null || echo "missing")"
   case "$health" in
-    healthy|starting|none)
-      clear_alert "health" "✅ *n8n watchdog* — container health is back to *${health}*."
+    healthy)
+      clear_alert "health" "✅ *n8n watchdog* — container health is back to *healthy*."
       return 0
+      ;;
+    starting)
+      # Transient state during boot or autoheal recovery — neither alert
+      # nor recovery. The next tick will re-evaluate.
+      return 0
+      ;;
+    none)
+      # No healthcheck configured. Either the docker-compose.yml lost its
+      # `healthcheck:` block or someone is running an out-of-tree image.
+      # Either way the second probe of this watchdog is now ineffective,
+      # so flag it loudly.
+      alert_once "health" "🚨 *n8n watchdog* — container \`${CONTAINER_NAME}\` has *no Docker healthcheck configured* (status: \`none\`). The watchdog cannot verify that n8n becomes *healthy*. Restore the \`healthcheck:\` block in docker-compose.yml."
+      return 1
       ;;
     unhealthy)
       alert_once "health" "🚨 *n8n watchdog* — container \`${CONTAINER_NAME}\` is *unhealthy*. autoheal should restart it shortly; if this alert persists, the restart is failing."
@@ -141,8 +168,16 @@ check_heartbeat_marker() {
   return 0
 }
 
-# Run all checks. Each check is independent: a failure on one does not skip
-# the others, so a single watchdog tick can surface multiple issues.
+# Probe the Docker daemon first. If it is unreachable, every downstream
+# check would surface a misleading "container missing" — short-circuit
+# instead so the operator sees the actual root cause (daemon down).
+if ! check_docker_daemon; then
+  exit 1
+fi
+
+# Each container-level check is independent: a failure on one does not
+# skip the others, so a single watchdog tick can surface multiple
+# distinct issues.
 overall=0
 check_container_running || overall=1
 check_container_health  || overall=1
