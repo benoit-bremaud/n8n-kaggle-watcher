@@ -1,0 +1,11 @@
+[Unit]
+Description=n8n external watchdog (probe + Telegram alert)
+Documentation=https://github.com/benoit-bremaud/n8n-kaggle-watcher
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/n8n-watchdog
+# Surface failures in the journal but keep the timer alive on errors.
+SuccessExitStatus=0 1

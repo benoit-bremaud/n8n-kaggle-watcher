@@ -215,7 +215,82 @@ trigger an automatic restart with no human intervention.
   nor `autoheal` has anything left to act on. Detecting an explicitly
   stopped-but-still-existing container (for example via
   `docker compose stop` / `docker stop`) requires an external watcher
-  independent of Docker (tracked as issue #43 option D).
+  independent of Docker (see **External Watchdog** below).
+
+## External Watchdog
+
+A host-side watchdog (`scripts/watchdog.sh`) probes the n8n stack from
+**outside Docker** and posts a Telegram alert directly — independent of
+n8n itself, so it stays usable when n8n is down, the container is
+removed, or DNS is broken inside the container. Runs on a `systemd`
+user timer every 15 minutes.
+
+It runs three checks; each one alerts once when it starts failing and
+sends a recovery notice when it recovers:
+
+1. **Container running** — `docker inspect` shows `running` for
+   `docker-n8n-1` (catches `make down` / `docker stop` / engine crash).
+2. **Container health** — Docker reports `healthy` (catches stuck
+   probes that autoheal failed to recover).
+3. **Heartbeat marker freshness** — `state/last-heartbeat` (written by
+   the Heartbeat workflow on every successful run) is younger than 26 h
+   (catches a deactivated workflow, expired credential, or any reason
+   the heartbeat stops firing without crashing the container).
+
+The marker check is opt-in via `MARKER_CHECK_ENABLED=1` in the env
+file. Until the Heartbeat workflow is updated to write the marker (see
+the workflow notes in `workflows/heartbeat.json`), leave it at `0` to
+avoid false positives.
+
+### Setup
+
+```bash
+# 1. Create the env file (chmod 600, kept outside the repo)
+mkdir -p ~/.config/n8n-watchdog
+cat > ~/.config/n8n-watchdog/env <<'EOF'
+TELEGRAM_BOT_TOKEN=123456:abc...           # same bot used by n8n
+TELEGRAM_CHAT_ID=123456789                 # same chat id
+STATE_DIR=/home/vev/Documents/07_kaggle/n8n-kaggle-watcher/state
+MARKER_CHECK_ENABLED=0                     # flip to 1 once the workflow writes the marker
+EOF
+chmod 600 ~/.config/n8n-watchdog/env
+
+# 2. Install the script + systemd user units, enable the timer
+make install-watchdog
+```
+
+### Verify
+
+```bash
+# Manual one-shot run (should exit 0 silently when everything is fine)
+~/.local/bin/n8n-watchdog && echo OK
+
+# Timer state and next firing time
+systemctl --user list-timers n8n-watchdog.timer
+
+# Last service run (logs, exit code)
+systemctl --user status n8n-watchdog.service
+journalctl --user -u n8n-watchdog.service -n 20
+
+# Trigger a controlled failure: stop n8n and wait <= 15 min for the alert.
+# After `make up`, the next watchdog run posts a recovery message.
+make down
+```
+
+### Anti-spam
+
+Each check writes a sentinel under `/tmp/n8n-watchdog-alerted-<check>`
+after sending an alert and only re-alerts once that sentinel is
+removed (which happens automatically when the check passes again). One
+issue → one alert + one recovery notice, regardless of how many timer
+ticks the failure spans.
+
+### Uninstall
+
+```bash
+make uninstall-watchdog       # removes script, units, disables timer
+rm -rf ~/.config/n8n-watchdog # only if you also want to wipe the secrets
+```
 
 ## Troubleshooting
 

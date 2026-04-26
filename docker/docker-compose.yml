@@ -8,11 +8,12 @@ services:
     environment:
       - GENERIC_TIMEZONE=Europe/Paris
       - TZ=Europe/Paris
-      - N8N_RESTRICT_FILE_ACCESS_TO=/data/rules
+      - N8N_RESTRICT_FILE_ACCESS_TO=/data/rules,/data/state
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     volumes:
       - n8n_data:/home/node/.n8n
       - ../rules:/data/rules:ro
+      - ../state:/data/state
       - ./resolv.conf:/etc/resolv.conf:ro
     healthcheck:
       test:
