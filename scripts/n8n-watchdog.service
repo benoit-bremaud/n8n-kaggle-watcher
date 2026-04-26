@@ -1,0 +1,14 @@
+[Unit]
+Description=n8n external watchdog (probe + Telegram alert)
+Documentation=https://github.com/benoit-bremaud/n8n-kaggle-watcher
+# Note: this is a user systemd unit and cannot order against the
+# system-level docker.service. The script itself probes the Docker
+# daemon first and alerts distinctly when it is unreachable, so the
+# watchdog stays useful even if Docker is not yet ready when the
+# timer fires.
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/n8n-watchdog
+# Surface failures in the journal but keep the timer alive on errors.
+SuccessExitStatus=0 1

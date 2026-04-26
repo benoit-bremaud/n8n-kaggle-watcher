@@ -8,6 +8,10 @@ rules/telegram-config.json
 # n8n data
 n8n_data/
 
+# Runtime state written by the Heartbeat workflow (read by the external
+# watchdog). The directory itself is tracked via state/.gitkeep.
+state/last-heartbeat
+
 # Node
 node_modules/
 

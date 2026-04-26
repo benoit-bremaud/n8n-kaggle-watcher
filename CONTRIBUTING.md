@@ -113,6 +113,37 @@ Before making the repository public, **all** of the following must be verified:
 - [ ] CI includes a secret detection job (gitleaks)
 - [ ] `make check` passes (JSON validation + lint)
 
+## Workflow Versioning Convention
+
+n8n's **Publish workflow** modal asks for a version name and an optional change description. Both are stored per-workflow in the n8n version history.
+
+**Version name format** — semver with a one-line description, separated by an em-dash:
+
+```
+vX.Y.Z — <imperative short description, sentence case, no trailing period>
+```
+
+Bump rules (per workflow, independent of the repo's git tag versioning):
+
+- **MAJOR** — breaking change to the workflow contract (renamed input/output fields, removed credentials, changed trigger type)
+- **MINOR** — new node, new branch in the flow, new external dependency
+- **PATCH** — bug fix, parameter tweak, message wording change, no structural change
+
+Examples:
+
+- `v1.0.0 — Initial publish`
+- `v1.1.0 — Disable n8n attribution`
+- `v1.2.0 — Write heartbeat marker for external watchdog`
+- `v1.2.1 — Fix marker file path typo`
+
+**Change description format** — a tight paragraph (2–4 sentences) explaining:
+
+1. What was added / changed (concrete: which node, which field)
+2. Why (the user-facing motivation, link to issue if relevant)
+3. Any operator-visible impact (e.g. "requires `make down && make up` to pick up new env var")
+
+The published version names are visible in the **Version History** side panel inside n8n and double as a per-workflow changelog. Keep them stable enough that scrolling through them tells the story of the workflow's evolution without needing to open each diff.
+
 ## Workflow Export Convention
 
 When exporting workflows from n8n to commit in git:
