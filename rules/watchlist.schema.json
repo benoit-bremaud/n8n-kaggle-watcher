@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Kaggle Watchlist",
+  "description": "Append-only log of Yes/No decisions taken on Kaggle Launch notifications. Both branches of the interactive flow (#28 accept, #46 skip) write here so the /status command (#32) and any future audit can reconstruct the decision history.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["competition_id", "decision", "timestamp", "source_email_id"],
+    "properties": {
+      "competition_id": {
+        "type": "string",
+        "description": "Kaggle competition slug or numeric id used in the URL (e.g. 'titanic')"
+      },
+      "competition_name": {
+        "type": "string",
+        "description": "Human-readable name parsed from the Launch email"
+      },
+      "competition_url": {
+        "type": "string",
+        "format": "uri",
+        "description": "Canonical kaggle.com URL of the competition"
+      },
+      "decision": {
+        "type": "string",
+        "enum": ["accept", "decline"],
+        "description": "User's choice: accept = scaffold a repo and join, decline = mark email read and log"
+      },
+      "timestamp": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO 8601 timestamp when the decision was recorded"
+      },
+      "source_email_id": {
+        "type": "string",
+        "description": "Gmail message id that triggered this decision, used to dedupe and to mark-as-read on decline"
+      },
+      "repo_url": {
+        "type": "string",
+        "format": "uri",
+        "description": "Set on accept entries once the GitHub repo has been scaffolded (#28). Absent on decline entries."
+      }
+    },
+    "additionalProperties": false
+  }
+}
