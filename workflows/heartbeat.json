@@ -72,6 +72,19 @@
       ],
       "id": "56d8ed96-5b15-4f7f-a8e0-9a41a143f5ea",
       "name": "Inject Chat ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "require('fs').writeFileSync('/data/state/last-heartbeat', new Date().toISOString());\nreturn $input.all();\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "id": "0b6ea5f6-a3d3-425f-b324-f7a67e155293",
+      "name": "Write Heartbeat Marker"
     }
   ],
   "pinData": {},
@@ -103,6 +116,17 @@
         [
           {
             "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Write Heartbeat Marker",
             "type": "main",
             "index": 0
           }

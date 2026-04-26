@@ -237,10 +237,10 @@ sends a recovery notice when it recovers:
    (catches a deactivated workflow, expired credential, or any reason
    the heartbeat stops firing without crashing the container).
 
-The marker check is opt-in via `MARKER_CHECK_ENABLED=1` in the env
-file. Until the Heartbeat workflow is updated to write the marker (see
-the workflow notes in `workflows/heartbeat.json`), leave it at `0` to
-avoid false positives.
+The marker check is gated by `MARKER_CHECK_ENABLED=1` in the env file.
+Set it to `0` only as an escape hatch if the marker file is intentionally
+absent (e.g. during a workflow rebuild) — otherwise leave it on so the
+third probe stays active.
 
 ### Setup
 
@@ -251,7 +251,7 @@ cat > ~/.config/n8n-watchdog/env <<'EOF'
 TELEGRAM_BOT_TOKEN=123456:abc...           # same bot used by n8n
 TELEGRAM_CHAT_ID=123456789                 # same chat id
 STATE_DIR=/home/vev/Documents/07_kaggle/n8n-kaggle-watcher/state
-MARKER_CHECK_ENABLED=0                     # flip to 1 once the workflow writes the marker
+MARKER_CHECK_ENABLED=1                     # 0 only as an escape hatch (see above)
 EOF
 chmod 600 ~/.config/n8n-watchdog/env
 
