@@ -273,7 +273,17 @@ All v1.0 issues closed (10/10). Repo public, workflows operational, post LinkedI
 ### Backlog follow-ups
 
 - Issue #43 closed — full silent-stop detection chain in place: Docker healthcheck → autoheal sidecar → external watchdog. The remaining failure mode this stack does *not* catch is "the entire host is down" — only addressable via a watchdog deported to a second machine (Tier 4), which is gated on #37 (Pi 5 migration) for the second host to exist.
-- Operator install on the homelab still pending: create `~/.config/n8n-watchdog/env` (chmod 600), then `make install-watchdog`, optionally `sudo loginctl enable-linger $USER`. The repo ships templates and units; nothing is auto-installed by `make up`.
+
+### Operator install — external watchdog activated on `vev-XPS-15-9530`
+
+- `~/.config/n8n-watchdog/env` created (chmod 600) with `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` sourced from `docker/.env`, plus `STATE_DIR=/home/vev/Documents/07_kaggle/n8n-kaggle-watcher/state` and `MARKER_CHECK_ENABLED=1`.
+- `make install-watchdog` ran clean: script copied to `~/.local/bin/n8n-watchdog`, `n8n-watchdog.{service,timer}` units installed under `~/.config/systemd/user/`, timer enabled and active. First tick at install time exited 0 (all three checks pass), next firing every 15 minutes.
+- `loginctl show-user vev -p Linger` returns `yes` — lingering already enabled on this host, so the timer survives reboots without an interactive login. No `sudo loginctl enable-linger` needed. (Will need to be run explicitly when the stack moves to a headless Pi 5 — see #37.)
+
+### E2E validation — alerting paths
+
+- **External watchdog (#43 option D):** controlled `make down` triggered the watchdog within seconds (next tick forced via `systemctl --user start n8n-watchdog.service`). Two distinct alerts received: 🚨 container missing + 🚨 health unknown (each gated by its own sentinel in `/tmp`). After `make up` and the next tick, both sentinels were cleared and recovery messages were sent: ✅ container running + ✅ health healthy. Total: 4 Telegram messages in ~2 minutes, anti-spam logic working as designed (no duplicate alerts).
+- **Error Handler (#40, deferred from PR #41):** Heartbeat workflow temporarily published as v1.3.0 with two breaking changes (Schedule Minutes/1 + Read Config path `/data/rules/telegram-config-TEST.json`). Two scheduled executions failed at 16:32 and 16:33 (Europe/Paris), both produced the expected Telegram payload via the global Error Handler — `Workflow: Heartbeat`, `Node: Read Config`, `Error: No file(s) found`, ISO timestamp, no n8n attribution footer, Markdown Legacy formatting renders correctly. Heartbeat v1.4.0 published immediately after to revert both changes; restoration verified via `n8n export:workflow --published`. **Issue #40 closed.**
 
 ### Epic — Interactive Telegram decisions for Kaggle events (Issue #45)
 
