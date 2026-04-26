@@ -41,11 +41,14 @@ flowchart LR
 
 Any failed production execution of **Kaggle Email Watcher** or **Heartbeat** triggers the **Error Handler** workflow, which sends a Telegram alert with the workflow name, failing node, error message, and timestamp.
 
+The Compose stack also runs an `autoheal` sidecar that restarts the n8n container if its Docker healthcheck fails, plus an `ngrok` tunnel that exposes `localhost:5678` publicly so Telegram inline-button callbacks can reach n8n (see [docs/setup-ngrok.md](docs/setup-ngrok.md)). A host-side `systemd` watchdog probes the stack from outside Docker and posts Telegram alerts directly when the container is missing, unhealthy, or has stopped firing the daily heartbeat (see [docs/setup-n8n.md → External Watchdog](docs/setup-n8n.md#external-watchdog)).
+
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
 - Gmail account with API access ([setup guide](docs/setup-gmail-oauth.md))
 - Telegram Bot token ([setup guide](docs/setup-n8n.md#2-create-telegram-bot-and-get-chat-id))
+- Free [ngrok](https://dashboard.ngrok.com/signup) account for the public webhook tunnel ([setup guide](docs/setup-ngrok.md))
 
 ## Quick Start
 
