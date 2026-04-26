@@ -39,8 +39,13 @@ install-watchdog: ## Install external watchdog (user systemd timer)
 	@echo "  Last run:  systemctl --user status n8n-watchdog.service"
 	@echo "  Manual:    $(WATCHDOG_BIN)"
 	@if [ ! -f "$(WATCHDOG_ENV_DIR)/env" ]; then \
-		echo "⚠ Create $(WATCHDOG_ENV_DIR)/env with TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID."; \
+		echo "⚠ Create $(WATCHDOG_ENV_DIR)/env with TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID and STATE_DIR."; \
 		echo "  See docs/setup-n8n.md → External Watchdog."; \
+	fi
+	@if [ "$$(loginctl show-user "$$USER" -p Linger --value 2>/dev/null)" != "yes" ]; then \
+		echo "⚠ Linger is not enabled for $$USER — the user systemd manager (and this timer) only runs while you are logged in."; \
+		echo "  After a reboot without an interactive login, the watchdog will be silent until next login."; \
+		echo "  Enable lingering once (requires sudo): sudo loginctl enable-linger $$USER"; \
 	fi
 
 uninstall-watchdog: ## Uninstall external watchdog (keeps env file)

@@ -40,11 +40,13 @@ MARKER_MAX_AGE_SECONDS="${MARKER_MAX_AGE_SECONDS:-93600}"
 MARKER_CHECK_ENABLED="${MARKER_CHECK_ENABLED:-0}"
 SENTINEL_DIR="${SENTINEL_DIR:-/tmp}"
 
-if [ -z "${STATE_DIR:-}" ]; then
-  # Default: <repo>/state, derived from the script's location.
-  script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-  STATE_DIR="$(cd -- "$script_dir/.." && pwd)/state"
-fi
+# STATE_DIR must be set explicitly. A previous version derived a default
+# from the script's location, but `make install-watchdog` copies the
+# script to ~/.local/bin, which would then resolve STATE_DIR to a wrong
+# path and surface false "marker missing" alerts. Forcing the operator
+# to set it makes the install path obvious and matches the env-file
+# template documented in docs/setup-n8n.md.
+: "${STATE_DIR:?STATE_DIR must be set in $WATCHDOG_ENV_FILE (absolute path to the host-side state directory containing the heartbeat marker)}"
 
 send_telegram() {
   local text="$1"

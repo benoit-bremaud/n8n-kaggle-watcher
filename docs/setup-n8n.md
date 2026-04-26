@@ -248,16 +248,35 @@ third probe stays active.
 # 1. Create the env file (chmod 600, kept outside the repo)
 mkdir -p ~/.config/n8n-watchdog
 cat > ~/.config/n8n-watchdog/env <<'EOF'
-TELEGRAM_BOT_TOKEN=123456:abc...           # same bot used by n8n
-TELEGRAM_CHAT_ID=123456789                 # same chat id
+# Required: bot credentials for the alert channel
+TELEGRAM_BOT_TOKEN=123456:abc...                  # same bot used by n8n
+TELEGRAM_CHAT_ID=123456789                        # same chat id
+
+# Required: absolute path of the state/ directory on the host
+# (matches the bind mount in docker/docker-compose.yml)
 STATE_DIR=/home/vev/Documents/07_kaggle/n8n-kaggle-watcher/state
-MARKER_CHECK_ENABLED=1                     # 0 only as an escape hatch (see above)
+
+# Optional: set 0 to skip the heartbeat marker check (escape hatch)
+MARKER_CHECK_ENABLED=1
 EOF
 chmod 600 ~/.config/n8n-watchdog/env
 
 # 2. Install the script + systemd user units, enable the timer
 make install-watchdog
 ```
+
+**Lingering (one-time, recommended on any host that will be left
+unattended after a reboot — Pi, headless server, machine you do not
+log into immediately):**
+
+```bash
+sudo loginctl enable-linger "$USER"
+```
+
+User systemd timers only run while a user session is active. Without
+lingering, the watchdog stops monitoring after a reboot until you log
+in again — defeating the purpose of an always-on detection layer.
+`make install-watchdog` warns when this is not set.
 
 ### Verify
 
