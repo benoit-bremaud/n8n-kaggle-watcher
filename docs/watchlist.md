@@ -57,23 +57,35 @@ The watchdog and `/status` reader tolerate the file being absent
 ## Writer — n8n Code node template
 
 Use this snippet in a Code node placed at the end of the accept and
-decline branches. It performs an atomic read-append-write so two
-parallel decisions on the same email cannot lose entries — but in
-practice the inbound flow is serialized by the Schedule Trigger, so
-the simple non-locking version below is sufficient.
+decline branches. This is a simple non-locking read/append/write
+example, not an atomic update: if two workflow executions modify the
+file concurrently, one write can overwrite the other and lose an
+entry. In practice the inbound flow is expected to be serialized by
+the Schedule Trigger, so this best-effort version is sufficient for
+this deployment.
 
 ```javascript
 const fs = require('fs');
 const PATH = '/data/state/watchlist.json';
 
-// Read existing list, default to empty array if missing or unparseable.
-let list = [];
+// Read existing list, default to empty array on missing file OR unparseable JSON.
+// ENOENT is treated as "first write" (empty list); any other read error throws
+// so a permission issue or filesystem failure surfaces clearly. A bad JSON
+// payload resets to [] rather than crashing the workflow — the writer will
+// rewrite the file with a clean structure on the next decision.
+let raw = '[]';
 try {
-  const raw = fs.readFileSync(PATH, 'utf8');
+  raw = fs.readFileSync(PATH, 'utf8');
+} catch (err) {
+  if (err.code !== 'ENOENT') throw err;
+}
+
+let list;
+try {
   list = JSON.parse(raw);
   if (!Array.isArray(list)) list = [];
 } catch (err) {
-  if (err.code !== 'ENOENT') throw err;
+  list = [];
 }
 
 // Build the new entry from the previous node's output.

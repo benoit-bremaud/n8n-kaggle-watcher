@@ -56,12 +56,47 @@ if [ -f "$PROJECT_ROOT/state/watchlist.json" ]; then
   fi
 
   if python3 -c "
-import json
+import json, sys
 try:
-    from jsonschema import validate
+    from jsonschema import Draft7Validator, FormatChecker
+    from datetime import datetime
+    from urllib.parse import urlparse
+
+    # Register stdlib-based checkers so 'format: date-time' and
+    # 'format: uri' are actually enforced. The default FormatChecker
+    # skips these unless rfc3339-validator / rfc3987 are installed,
+    # which we do not want to require in CI. The checks below cover
+    # the constraints declared in rules/watchlist.schema.json without
+    # adding any external dependency.
+    fmt = FormatChecker()
+
+    @fmt.checks('date-time', ValueError)
+    def _check_date_time(instance):
+        if not isinstance(instance, str):
+            return True
+        # datetime.fromisoformat handles 'Z' suffix from Python 3.11;
+        # normalize for older versions just in case.
+        datetime.fromisoformat(instance.replace('Z', '+00:00'))
+        return True
+
+    @fmt.checks('uri', ValueError)
+    def _check_uri(instance):
+        if not isinstance(instance, str):
+            return True
+        parsed = urlparse(instance)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError('missing scheme or netloc')
+        return True
+
     schema = json.load(open('$PROJECT_ROOT/rules/watchlist.schema.json'))
     data = json.load(open('$PROJECT_ROOT/state/watchlist.json'))
-    validate(instance=data, schema=schema)
+    validator = Draft7Validator(schema, format_checker=fmt)
+    errors = sorted(validator.iter_errors(data), key=lambda e: list(e.path))
+    if errors:
+        for e in errors:
+            path = '/'.join(str(p) for p in e.path) or '<root>'
+            print(f'  ✗ {path}: {e.message}', file=sys.stderr)
+        sys.exit(1)
     print('✓ state/watchlist.json passes schema validation')
 except ImportError:
     print('⚠ jsonschema not installed, skipping schema validation (pip install jsonschema)')
