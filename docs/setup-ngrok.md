@@ -18,10 +18,10 @@ stack moves to the homelab Pi.
 ## Operator setup (one-time)
 
 1. **Create a free ngrok account** at
-   https://dashboard.ngrok.com/signup. The free tier is sufficient for
+   <https://dashboard.ngrok.com/signup>. The free tier is sufficient for
    prototyping (1 concurrent tunnel, random subdomain per session).
 2. **Copy the authtoken** from
-   https://dashboard.ngrok.com/get-started/your-authtoken.
+   <https://dashboard.ngrok.com/get-started/your-authtoken>.
 3. **Set it in `docker/.env`**:
 
    ```bash
@@ -48,10 +48,13 @@ and tears down with `make down`.
 # 1. Service is up
 docker ps --filter "name=docker-ngrok-1" --format "{{.Names}}\t{{.Status}}"
 
-# 2. Read the current public URL from ngrok's local inspector API
-PUBLIC_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+# 2. Read the current HTTPS public URL from ngrok's local inspector API.
+# Filter explicitly on `proto == "https"` rather than taking .tunnels[0]:
+# Telegram requires HTTPS for webhooks, and when ngrok exposes both http
+# and https tunnels their order is not guaranteed.
+PUBLIC_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[] | select(.proto == "https") | .public_url')
 echo "$PUBLIC_URL"
-# expected: https://<random>.ngrok-free.app
+# expected: https://<random>.ngrok-free.dev
 
 # 3. Hit n8n's healthcheck endpoint through the tunnel
 curl -i "$PUBLIC_URL/healthz"
@@ -94,7 +97,7 @@ errors (often a bad authtoken or an account-level limit hit).
 The tunnel is fine — the issue is one layer up. Check that the bot
 token is correct, that `setWebhook` was called with the right URL,
 and that `getWebhookInfo` shows no `last_error_message`. These are
-#31 territory.
+issue #31 territory.
 
 ## Stop / disable the tunnel
 

@@ -36,7 +36,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   ngrok:
-    image: ngrok/ngrok:latest
+    image: ngrok/ngrok:3.38.0-debian
     restart: unless-stopped
     # Match the n8n service so the tunnel target stays a simple
     # localhost:5678 and ngrok's local inspector API on port 4040 is
@@ -45,7 +45,10 @@ services:
     network_mode: host
     command: http --log=stdout 5678
     environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+      # Fail fast at compose-time when the operator forgot to set
+      # NGROK_AUTHTOKEN in docker/.env, rather than starting the
+      # container with an empty token and looping on auth errors.
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:?NGROK_AUTHTOKEN must be set in docker/.env (see docs/setup-ngrok.md)}
 
 volumes:
   n8n_data:
