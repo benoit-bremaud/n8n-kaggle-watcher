@@ -44,7 +44,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "=={{ $json.action }}",
+                    "leftValue": "={{ $json.action }}",
                     "rightValue": "join",
                     "operator": {
                       "type": "string",
@@ -69,7 +69,7 @@
                 "conditions": [
                   {
                     "id": "6603ba66-31b6-4186-a9cd-50c70c15b3dd",
-                    "leftValue": "= ={{ $json.action }}",
+                    "leftValue": "={{ $json.action }}",
                     "rightValue": "skip",
                     "operator": {
                       "type": "string",
