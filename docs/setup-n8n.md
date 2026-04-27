@@ -97,7 +97,7 @@ Open the UI at [http://localhost:5678](http://localhost:5678). On first launch, 
 
 ## 4. Import Workflows
 
-Three workflows need to be imported:
+Four workflows need to be imported:
 
 ### Kaggle Email Watcher (main workflow)
 
@@ -116,10 +116,17 @@ Three workflows need to be imported:
 2. Select `workflows/error-handler.json`
 3. Publish the workflow so it is available as a target
 
-Then link it as the error workflow of the other two:
+### Telegram Callback Handler (router for inline-button clicks)
+
+1. Click **Add workflow** → menu `⋮` → **Import from file**
+2. Select `workflows/telegram-callback-handler.json`
+3. The workflow defines a Webhook trigger on `POST /webhook/telegram-callback` — the path the `webhook-updater` sidecar registers with Telegram on every `make up`
+
+Then link the Error Handler as the error workflow of the other three:
 
 1. Open **Heartbeat** → menu `⋮` → **Settings** → **Error Workflow** → select **Error Handler** → **Save**
 2. Open **Kaggle Email Watcher** → menu `⋮` → **Settings** → **Error Workflow** → select **Error Handler** → **Save**
+3. Open **Telegram Callback Handler** → menu `⋮` → **Settings** → **Error Workflow** → select **Error Handler** → **Save**
 
 Any failed production execution will now trigger a Telegram alert with the workflow name, failing node, error message, and timestamp (Europe/Paris).
 
@@ -151,9 +158,11 @@ For each workflow:
 
 1. Open the workflow
 2. Click **Publish** (top right)
-3. The schedule triggers will start running:
-   - **Heartbeat**: every day at 07:55 (confirms n8n is alive)
-   - **Kaggle Email Watcher**: every day at 08:00 (checks Gmail for Kaggle emails)
+3. The triggers will start running:
+   - **Heartbeat**: scheduled every day at 07:55 (confirms n8n is alive)
+   - **Kaggle Email Watcher**: scheduled every day at 08:00 (checks Gmail for Kaggle emails)
+   - **Telegram Callback Handler**: webhook trigger on `POST /webhook/telegram-callback` — fires every time a user clicks an inline button on a Kaggle event notification (gated on #27 for the buttons themselves to ship)
+   - **Error Handler**: triggered automatically when any of the three above throws — no schedule of its own
 
 ## 7. Verify
 
@@ -367,10 +376,18 @@ curl -is -X POST "$PUBLIC_URL/webhook/telegram-callback" \
     "callback_query": {
       "id": "test-callback-id",
       "from": { "id": 1, "first_name": "Test" },
+      "message": { "message_id": 42, "chat": { "id": 99 } },
       "data": "action=skip&competition_id=titanic"
     }
   }'
 ```
+
+The `message.message_id` and `message.chat.id` fields mirror the shape
+of a real Telegram `callback_query` payload — the `Parse Callback Data`
+Code node extracts them so downstream branches (#46, #28) can edit the
+original message in place and dispatch to the right chat. They are
+optional for the routing test but should be included to keep the
+simulated payload faithful.
 
 - **Before the handler workflow exists** (no Webhook node registered):
   expect `HTTP 404` with body `{"code":404,"message":"The requested
@@ -378,7 +395,23 @@ curl -is -X POST "$PUBLIC_URL/webhook/telegram-callback" \
   proves the network path Telegram → ngrok → n8n is reachable.
 - **After the handler workflow is active**: expect `HTTP 200` and an
   execution visible in n8n's Executions list, with the Switch node
-  routed to the right branch based on `data`.
+  routed to the right branch based on `data` — `action=join` →
+  `Answer Join`, `action=skip` → `Answer Skip`, anything else →
+  `Answer Unknown`. Each branch calls `answerCallbackQuery` to dismiss
+  the Telegram spinner with a short confirmation
+  (`✅ Joining…` / `❌ Skipping…` / `⚠️ Unknown action`).
+- **Expected side effects of the simulated test**: the `Answer*` nodes
+  will return a Telegram error (`Bad Request: query is too old or
+  invalid`) because the fake `callback_query.id` does not exist on
+  Telegram's side. This is correct behavior — the failure propagates
+  to the global Error Handler, which sends one Telegram alert per
+  call. Real button clicks from Telegram supply a valid `id` and
+  succeed silently.
+- **What the handler does NOT do yet**: write to `state/watchlist.json`
+  (owned by #46 / #28), call any downstream workflow, mark the source
+  email as read, or edit the original Telegram message. The current
+  scope is strictly the router skeleton — the action branches will be
+  grafted onto the Switch outputs in #46 and #28.
 
 ### Webhook is not being delivered to n8n
 
