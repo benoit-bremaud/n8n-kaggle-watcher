@@ -367,7 +367,7 @@ chain works end-to-end without going through the Telegram client.
 
 ```bash
 # Reach the handler through the public ngrok URL, just like Telegram would
-PUBLIC_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[] | select(.proto == "https") | .public_url')
+PUBLIC_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '[.tunnels[] | select(.proto == "https") | .public_url][0]')
 
 curl -is -X POST "$PUBLIC_URL/webhook/telegram-callback" \
   -H 'Content-Type: application/json' \

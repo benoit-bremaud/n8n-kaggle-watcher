@@ -65,7 +65,7 @@ services:
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN must be set in docker/.env}
       # WEBHOOK_PATH must match the path of the Webhook node in
-      # workflows/telegram-callback-handler.json (Partie B of #31).
+      # workflows/telegram-callback-handler.json (Part B of #31).
       - WEBHOOK_PATH=/webhook/telegram-callback
     volumes:
       - ../scripts/update-telegram-webhook.sh:/opt/update-webhook.sh:ro
