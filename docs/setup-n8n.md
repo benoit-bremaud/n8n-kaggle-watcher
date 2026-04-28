@@ -97,7 +97,7 @@ Open the UI at [http://localhost:5678](http://localhost:5678). On first launch, 
 
 ## 4. Import Workflows
 
-Three workflows need to be imported:
+Four workflows need to be imported:
 
 ### Kaggle Email Watcher (main workflow)
 
@@ -116,10 +116,17 @@ Three workflows need to be imported:
 2. Select `workflows/error-handler.json`
 3. Publish the workflow so it is available as a target
 
-Then link it as the error workflow of the other two:
+### Telegram Callback Handler (router for inline-button clicks)
+
+1. Click **Add workflow** → menu `⋮` → **Import from file**
+2. Select `workflows/telegram-callback-handler.json`
+3. The workflow defines a Webhook trigger on `POST /webhook/telegram-callback` — the path the `webhook-updater` sidecar registers with Telegram on every `make up`
+
+Then link the Error Handler as the error workflow of the other three:
 
 1. Open **Heartbeat** → menu `⋮` → **Settings** → **Error Workflow** → select **Error Handler** → **Save**
 2. Open **Kaggle Email Watcher** → menu `⋮` → **Settings** → **Error Workflow** → select **Error Handler** → **Save**
+3. Open **Telegram Callback Handler** → menu `⋮` → **Settings** → **Error Workflow** → select **Error Handler** → **Save**
 
 Any failed production execution will now trigger a Telegram alert with the workflow name, failing node, error message, and timestamp (Europe/Paris).
 
@@ -151,9 +158,11 @@ For each workflow:
 
 1. Open the workflow
 2. Click **Publish** (top right)
-3. The schedule triggers will start running:
-   - **Heartbeat**: every day at 07:55 (confirms n8n is alive)
-   - **Kaggle Email Watcher**: every day at 08:00 (checks Gmail for Kaggle emails)
+3. The triggers will start running:
+   - **Heartbeat**: scheduled every day at 07:55 (confirms n8n is alive)
+   - **Kaggle Email Watcher**: scheduled every day at 08:00 (checks Gmail for Kaggle emails)
+   - **Telegram Callback Handler**: webhook trigger on `POST /webhook/telegram-callback` — fires every time a user clicks an inline button on a Kaggle event notification (gated on #27 for the buttons themselves to ship)
+   - **Error Handler**: triggered automatically when any of the three above throws — no schedule of its own
 
 ## 7. Verify
 
@@ -310,6 +319,113 @@ ticks the failure spans.
 make uninstall-watchdog       # removes script, units, disables timer
 rm -rf ~/.config/n8n-watchdog # only if you also want to wipe the secrets
 ```
+
+## Telegram Webhook Auto-Registration
+
+The `webhook-updater` Compose sidecar registers the Telegram Bot API
+webhook URL automatically every time the stack starts, so the
+ngrok-rotated public URL is always in sync with what Telegram knows
+about. This means inline-button `callback_query` events are routed
+back to n8n without any operator action after `make up`.
+
+How it works:
+
+1. Sidecar boots after the `ngrok` service, installs `curl` + `jq`
+   (Alpine image), then runs [`scripts/update-telegram-webhook.sh`](../scripts/update-telegram-webhook.sh).
+2. Polls `http://localhost:4040/api/tunnels` until ngrok exposes its
+   HTTPS tunnel (max 30 attempts, 2s apart).
+3. Calls Telegram `setWebhook` with the URL
+   `<ngrok-public-url>/webhook/telegram-callback` and
+   `allowed_updates=["callback_query"]` so unrelated bot updates
+   (chat messages, forwards) do not hit the handler.
+4. Verifies via `getWebhookInfo` that the URL was accepted.
+5. Exits 0; Compose stops the container cleanly.
+
+Required env (read from `docker/.env`):
+
+- `TELEGRAM_BOT_TOKEN` — same bot used by the notification workflows.
+
+Optional overrides (set as Compose env on the `webhook-updater`
+service if needed): `WEBHOOK_PATH`, `NGROK_API`, `MAX_ATTEMPTS`,
+`SLEEP_BETWEEN`. See the script header for defaults.
+
+### Verify the webhook is registered with Telegram
+
+```bash
+# Reads the bot token from docker/.env, asks Telegram what URL it has
+set -a && . docker/.env && set +a
+curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo" | jq .
+unset TELEGRAM_BOT_TOKEN
+```
+
+Expected `result.url` should be `https://<random>.ngrok-free.dev/webhook/telegram-callback`. Expected `result.allowed_updates` should be `["callback_query"]`.
+
+### Simulate a callback locally (no Telegram needed)
+
+Useful before the inline buttons (#27) ship — proves the handler
+chain works end-to-end without going through the Telegram client.
+
+```bash
+# Reach the handler through the public ngrok URL, just like Telegram would
+PUBLIC_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '[.tunnels[] | select(.proto == "https") | .public_url][0]')
+
+curl -is -X POST "$PUBLIC_URL/webhook/telegram-callback" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "update_id": 1,
+    "callback_query": {
+      "id": "test-callback-id",
+      "from": { "id": 1, "first_name": "Test" },
+      "message": { "message_id": 42, "chat": { "id": 99 } },
+      "data": "action=skip&competition_id=titanic"
+    }
+  }'
+```
+
+The `message.message_id` and `message.chat.id` fields mirror the shape
+of a real Telegram `callback_query` payload — the `Parse Callback Data`
+Code node extracts them so downstream branches (#46, #28) can edit the
+original message in place and dispatch to the right chat. They are
+optional for the routing test but should be included to keep the
+simulated payload faithful.
+
+- **Before the handler workflow exists** (no Webhook node registered):
+  expect `HTTP 404` with body `{"code":404,"message":"The requested
+  webhook \"POST telegram-callback\" is not registered."}`. This still
+  proves the network path Telegram → ngrok → n8n is reachable.
+- **After the handler workflow is active**: expect `HTTP 200` and an
+  execution visible in n8n's Executions list, with the Switch node
+  routed to the right branch based on `data` — `action=join` →
+  `Answer Join`, `action=skip` → `Answer Skip`, anything else →
+  `Answer Unknown`. Each branch calls `answerCallbackQuery` to dismiss
+  the Telegram spinner with a short confirmation
+  (`✅ Joining…` / `❌ Skipping…` / `⚠️ Unknown action`).
+- **Expected side effects of the simulated test**: the `Answer*` nodes
+  will return a Telegram error (`Bad Request: query is too old or
+  invalid`) because the fake `callback_query.id` does not exist on
+  Telegram's side. This is correct behavior — the failure propagates
+  to the global Error Handler, which sends one Telegram alert per
+  call. Real button clicks from Telegram supply a valid `id` and
+  succeed silently.
+- **What the handler does NOT do yet**: write to `state/watchlist.json`
+  (owned by #46 / #28), call any downstream workflow, mark the source
+  email as read, or edit the original Telegram message. The current
+  scope is strictly the router skeleton — the action branches will be
+  grafted onto the Switch outputs in #46 and #28.
+
+### Webhook is not being delivered to n8n
+
+Debug ladder, in order:
+
+1. `docker logs docker-webhook-updater-1` — did the sidecar succeed
+   on the last `make up`? Look for `✓ getWebhookInfo confirms URL`.
+2. `getWebhookInfo` (above) — does Telegram report a recent
+   `last_error_message`? Common ones: `Bad Request: bad webhook`
+   (URL is wrong shape), `Wrong response from the webhook` (n8n
+   workflow returned non-2xx).
+3. `docker logs docker-ngrok-1` — is the tunnel still up?
+4. Manually re-run the script:
+   `docker compose -f docker/docker-compose.yml --env-file docker/.env run --rm webhook-updater`.
 
 ## Troubleshooting
 

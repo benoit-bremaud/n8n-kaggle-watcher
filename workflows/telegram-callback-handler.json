@@ -1,0 +1,235 @@
+{
+  "name": "Telegram Callback Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-callback",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b0ba9b65-42ce-411a-8fd7-5b1d024e8cb1",
+      "name": "Telegram Callback Webhook",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the Telegram callback_query payload posted by the Webhook node.\n// Expected callback_data format: \"action=<join|skip>&competition_id=<slug>\"\n// We pull a few extra fields (callback_query_id, chat_id, message_id) that\n// downstream branches will need to call answerCallbackQuery and to edit\n// the original message in #27/#46/#28.\n\nconst body = $input.first().json.body;\n\nif (!body || !body.callback_query) {\n  throw new Error('Missing callback_query in webhook payload — not a Telegram callback POST?');\n}\n\nconst cb = body.callback_query;\nconst rawData = cb.data || '';\n\n// Parse \"key=value&key=value\" manually. URLSearchParams would also work at\n// runtime, but n8n's Code node TS checker doesn't recognize it and shows a\n// false-positive \"Cannot find name\" squiggle. The manual reduce below is\n// equivalent and stays clean in the editor.\nconst params = Object.fromEntries(\n  rawData\n    .split('&')\n    .filter(Boolean)\n    .map((pair) => {\n      const [key, ...valueParts] = pair.split('=');\n      return [\n        decodeURIComponent(key),\n        decodeURIComponent(valueParts.join('=')),\n      ];\n    })\n);\n\nconst action = params.action || 'unknown';\nconst competitionId = params.competition_id || '';\n\nreturn [\n  {\n    json: {\n      action,\n      competition_id: competitionId,\n      callback_query_id: cb.id,\n      chat_id: cb.message?.chat?.id,\n      message_id: cb.message?.message_id,\n      from_user_id: cb.from?.id,\n      from_first_name: cb.from?.first_name,\n      raw_data: rawData,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "2f06d0f2-22d5-45a5-a874-9806f3ab8b4f",
+      "name": "Parse Callback Data"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "join",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "850e2115-d0b1-4dc1-918e-b8d4d111df34"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "join"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6603ba66-31b6-4186-a9cd-50c70c15b3dd",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "skip",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "skip"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "5d9f8a95-5462-4ef1-b9f9-8265ce02d85a",
+      "name": "Route by Action"
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_query_id }}",
+        "additionalFields": {
+          "text": "✅ Joining…"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        -112
+      ],
+      "id": "534458fa-7640-4b19-8a45-b4352bec9b35",
+      "name": "Answer Join",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_query_id }}",
+        "additionalFields": {
+          "text": "❌ Skipping…"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "40424679-76db-45c6-8dbf-2205d2fb3ca1",
+      "name": "Answer Skip",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_query_id }}",
+        "additionalFields": {
+          "text": "⚠️ Unknown action"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        112
+      ],
+      "id": "444421b6-e007-4d3f-a207-e00d026d348e",
+      "name": "Answer Unknown",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Callback Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Callback Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Callback Data": {
+      "main": [
+        [
+          {
+            "node": "Route by Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Action": {
+      "main": [
+        [
+          {
+            "node": "Answer Join",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Answer Skip",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Answer Unknown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "meta": {},
+  "tags": []
+}

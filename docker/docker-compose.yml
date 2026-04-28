@@ -40,8 +40,8 @@ services:
     restart: unless-stopped
     # Match the n8n service so the tunnel target stays a simple
     # localhost:5678 and ngrok's local inspector API on port 4040 is
-    # reachable from the host (used by the future webhook-updater
-    # sidecar in #31).
+    # reachable from the host (used by the webhook-updater sidecar
+    # below).
     network_mode: host
     command: http --log=stdout 5678
     environment:
@@ -49,6 +49,27 @@ services:
       # NGROK_AUTHTOKEN in docker/.env, rather than starting the
       # container with an empty token and looping on auth errors.
       - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:?NGROK_AUTHTOKEN must be set in docker/.env (see docs/setup-ngrok.md)}
+
+  webhook-updater:
+    image: alpine:3.20
+    # `restart: on-failure` so the script retries if ngrok was not yet
+    # ready or Telegram briefly returned an error. Once successful the
+    # script exits 0 and the container stops cleanly — Compose treats
+    # exit 0 as terminal success and does not loop.
+    restart: on-failure
+    # Same network as ngrok so localhost:4040 (the ngrok inspector
+    # API) is reachable.
+    network_mode: host
+    depends_on:
+      - ngrok
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN must be set in docker/.env}
+      # WEBHOOK_PATH must match the path of the Webhook node in
+      # workflows/telegram-callback-handler.json (Part B of #31).
+      - WEBHOOK_PATH=/webhook/telegram-callback
+    volumes:
+      - ../scripts/update-telegram-webhook.sh:/opt/update-webhook.sh:ro
+    command: sh -c 'apk add --no-cache curl jq >/dev/null && /opt/update-webhook.sh'
 
 volumes:
   n8n_data:
