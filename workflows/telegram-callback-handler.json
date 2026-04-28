@@ -101,7 +101,7 @@
     {
       "parameters": {
         "resource": "callback",
-        "queryId": "=={{ $json.callback_query_id }}",
+        "queryId": "={{ $json.callback_query_id }}",
         "additionalFields": {
           "text": "✅ Joining…"
         }
@@ -125,7 +125,7 @@
     {
       "parameters": {
         "resource": "callback",
-        "queryId": "=={{ $json.callback_query_id }}",
+        "queryId": "={{ $json.callback_query_id }}",
         "additionalFields": {
           "text": "❌ Skipping…"
         }
@@ -149,7 +149,7 @@
     {
       "parameters": {
         "resource": "callback",
-        "queryId": "=={{ $json.callback_query_id }}",
+        "queryId": "={{ $json.callback_query_id }}",
         "additionalFields": {
           "text": "⚠️ Unknown action"
         }
