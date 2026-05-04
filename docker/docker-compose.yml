@@ -9,7 +9,7 @@ services:
       - GENERIC_TIMEZONE=Europe/Paris
       - TZ=Europe/Paris
       - N8N_RESTRICT_FILE_ACCESS_TO=/data
-      - NODE_FUNCTION_ALLOW_BUILTIN=fs
+      - NODE_FUNCTION_ALLOW_BUILTIN=fs,crypto
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     volumes:
       - n8n_data:/home/node/.n8n

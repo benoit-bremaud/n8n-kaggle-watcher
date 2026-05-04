@@ -413,6 +413,39 @@ simulated payload faithful.
   scope is strictly the router skeleton — the action branches will be
   grafted onto the Switch outputs in #46 and #28.
 
+### Callback data formats — Phase B stash vs Phase A slug
+
+Since #66 (Phase B), the handler resolves `callback_data` against a
+stash file (`state/pending-callbacks.json`) instead of carrying the
+slug inline. Two formats are accepted, in priority order:
+
+1. **Compact stash format (production)**: `j:<shortid>` / `s:<shortid>`
+   where `<shortid>` is an 8-char hex hash written by the
+   `Kaggle Email Watcher` workflow's `Stash Pending Callback` Code
+   node when an email triggers a notification. The handler reads
+   `state/pending-callbacks.json`, finds the entry by `shortid`, and
+   exposes the resolved `competition_id`, `competition_url`,
+   `competition_name`, `email_id`, and stashed `chat_id` downstream.
+   Constant 11 bytes regardless of slug length, so it always fits
+   Telegram's 64-byte cap.
+2. **Phase A slug fallback (test harness)**: `j:<slug>` / `s:<slug>`
+   where the suffix is **not** a hex hash. Used by this curl example
+   so the test path keeps working without seeding the stash. The
+   handler returns `competition_id: <slug>` and the rest of the
+   resolved fields are empty.
+
+To exercise the stash path explicitly, seed
+`state/pending-callbacks.json` with one entry (see
+[`docs/pending-callbacks.md`](pending-callbacks.md) for the schema and
+example payload), then post a curl with the matching `<shortid>`.
+Inspect the n8n execution's `Parse Callback Data` output: the
+`stash_hit` field is `true` on a stash lookup hit and `false` on a
+fallback or miss. A miss with a hex-shaped suffix returns empty
+`competition_id` (the handler explicitly does not fall back to the
+slug path when the suffix looks like a hash, to avoid silent data
+corruption when a real callback arrives with a stashed shortid that
+has been pruned).
+
 ### Webhook is not being delivered to n8n
 
 Debug ladder, in order:
