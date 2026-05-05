@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body;\n\nif (!body || !body.callback_query) {\n  throw new Error('Missing callback_query in webhook payload — not a Telegram callback POST?');\n}\n\nconst cb = body.callback_query;\nconst rawData = cb.data || '';\n\n// Parse the callback_data. Two formats supported:\n//\n// 1. Compact (Phase A, production): \"j:<slug>\" / \"s:<slug>\" — fits under\n//    Telegram's 64-byte callback_data cap for slugs up to ~62 chars.\n//    Single-letter prefix maps to action: \"j\" → \"join\", \"s\" → \"skip\",\n//    anything else → \"unknown\" (caught by the Switch fallback).\n//\n// 2. URL-encoded (legacy, simulated curl test harness in docs/setup-n8n.md):\n//    \"action=<verb>&competition_id=<slug>\". Kept for backward compatibility\n//    with the existing E2E test harness so the operator can still simulate\n//    callbacks via curl without going through Telegram.\nlet action = 'unknown';\nlet competitionId = '';\n\nif (rawData.includes('=')) {\n  // Legacy URL-encoded format\n  const params = Object.fromEntries(\n    rawData\n      .split('&')\n      .filter(Boolean)\n      .map((pair) => {\n        const [key, ...valueParts] = pair.split('=');\n        return [\n          decodeURIComponent(key),\n          decodeURIComponent(valueParts.join('=')),\n        ];\n      })\n  );\n  action = params.action || 'unknown';\n  competitionId = params.competition_id || '';\n} else if (rawData.includes(':')) {\n  // Compact Phase A format: \"j:<slug>\" or \"s:<slug>\"\n  const colonIdx = rawData.indexOf(':');\n  const prefix = rawData.slice(0, colonIdx);\n  competitionId = rawData.slice(colonIdx + 1);\n  if (prefix === 'j') action = 'join';\n  else if (prefix === 's') action = 'skip';\n  // anything else → action stays 'unknown', Switch fallback handles it\n}\n\nreturn [\n  {\n    json: {\n      action,\n      competition_id: competitionId,\n      callback_query_id: cb.id,\n      chat_id: cb.message?.chat?.id,\n      message_id: cb.message?.message_id,\n      from_user_id: cb.from?.id,\n      from_first_name: cb.from?.first_name,\n      raw_data: rawData,\n    },\n  },\n];\n"
+        "jsCode": "const fs = require('fs');\nconst PATH = '/data/state/pending-callbacks.json';\n\nconst body = $input.first().json.body;\nif (!body || !body.callback_query) {\n  throw new Error('Missing callback_query in webhook payload — not a Telegram callback POST?');\n}\n\nconst cb = body.callback_query;\nconst rawData = cb.data || '';\n\nlet action = 'unknown';\nlet suffix = '';\nlet competitionIdLegacy = '';\n\n// Format detection priority:\n// 1. Legacy URL-encoded \"action=<verb>&competition_id=<slug>\" — when \"=\" in rawData.\n// 2. Compact \"<j|s>:<shortid|slug>\" — when \":\" at position 1.\nif (rawData.includes('=')) {\n  const params = Object.fromEntries(\n    rawData\n      .split('&')\n      .filter(Boolean)\n      .map((pair) => {\n        const [key, ...valueParts] = pair.split('=');\n        return [\n          decodeURIComponent(key),\n          decodeURIComponent(valueParts.join('=')),\n        ];\n      })\n  );\n  action = params.action || 'unknown';\n  competitionIdLegacy = params.competition_id || '';\n} else {\n  const colonIdx = rawData.indexOf(':');\n  if (colonIdx === 1) {\n    const prefix = rawData[0];\n    suffix = rawData.slice(2);\n    if (prefix === 'j') action = 'join';\n    else if (prefix === 's') action = 'skip';\n  }\n}\n\n// Stash lookup. Returns the resolved entry on hit, null on miss.\nlet entry = null;\nlet stashError = null;\nif (suffix) {\n  try {\n    const list = JSON.parse(fs.readFileSync(PATH, 'utf8'));\n    if (Array.isArray(list)) {\n      entry = list.find((e) => e.shortid === suffix) || null;\n    }\n  } catch (err) {\n    if (err.code !== 'ENOENT') {\n      // Don't swallow — surface storage failure via the Error Handler so\n      // a corrupt or unreadable stash file does not silently turn live\n      // callbacks into half-broken executions. ENOENT stays silent (a\n      // fresh install with no stash file yet is normal).\n      stashError = err.message;\n    }\n  }\n\n  const isHexHash = /^[0-9a-f]{6,16}$/.test(suffix);\n  if (!entry && !isHexHash) {\n    // Phase A slug fallback: suffix is not a hex hash, treat it as a\n    // direct slug for the simulated curl test harness.\n    entry = { competition_id: suffix };\n  } else if (!entry && isHexHash) {\n    // Hex-hash suffix but stash miss: the entry has been pruned (>30d),\n    // never written, or the file became unreadable above. Reset action\n    // to 'unknown' rather than routing a click to join/skip with empty\n    // context — the Switch fallback then handles it loudly via Answer\n    // Unknown, surfacing the issue instead of silently producing a\n    // half-broken execution downstream. Caught by Copilot review on PR #69.\n    action = 'unknown';\n  }\n}\n\nif (stashError) {\n  throw new Error(`Pending callbacks stash read failed: ${stashError}`);\n}\n\nconst competition_id = entry?.competition_id || competitionIdLegacy;\n\nreturn [{\n  json: {\n    action,\n    competition_id,\n    competition_url:   entry?.competition_url   || '',\n    competition_name:  entry?.competition_name  || '',\n    email_id:          entry?.email_id          || '',\n    chat_id:           cb.message?.chat?.id     ?? entry?.chat_id ?? '',\n    message_id:        cb.message?.message_id   ?? entry?.message_id ?? null,\n    callback_query_id: cb.id,\n    from_user_id:      cb.from?.id,\n    from_first_name:   cb.from?.first_name,\n    raw_data:          rawData,\n    stash_hit:         !!entry?.shortid,\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -110,7 +110,7 @@
       "typeVersion": 1.2,
       "position": [
         624,
-        -112
+        -256
       ],
       "id": "534458fa-7640-4b19-8a45-b4352bec9b35",
       "name": "Answer Join",
@@ -134,7 +134,7 @@
       "typeVersion": 1.2,
       "position": [
         624,
-        0
+        -64
       ],
       "id": "40424679-76db-45c6-8dbf-2205d2fb3ca1",
       "name": "Answer Skip",
@@ -158,7 +158,7 @@
       "typeVersion": 1.2,
       "position": [
         624,
-        112
+        128
       ],
       "id": "444421b6-e007-4d3f-a207-e00d026d348e",
       "name": "Answer Unknown",

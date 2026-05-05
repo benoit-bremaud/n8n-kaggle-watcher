@@ -108,5 +108,86 @@ except ImportError:
   fi
 fi
 
+# Validate state/pending-callbacks.json against its schema, if present.
+# Same pattern as the watchlist block above: gitignored runtime data
+# (one entry per outbound Telegram notification, indexed by shortid),
+# validation skipped silently when the file does not exist so a fresh
+# clone still passes.
+if [ -f "$PROJECT_ROOT/state/pending-callbacks.json" ]; then
+  if python3 -c "import json; json.load(open('$PROJECT_ROOT/state/pending-callbacks.json'))"; then
+    echo "✓ state/pending-callbacks.json is valid JSON"
+  else
+    echo "✗ state/pending-callbacks.json has invalid JSON syntax"
+    exit 1
+  fi
+
+  if python3 -c "
+import json, sys
+try:
+    from jsonschema import Draft7Validator, FormatChecker
+    from datetime import datetime
+    from urllib.parse import urlparse
+
+    fmt = FormatChecker()
+
+    @fmt.checks('date-time', ValueError)
+    def _check_date_time(instance):
+        if not isinstance(instance, str):
+            return True
+        datetime.fromisoformat(instance.replace('Z', '+00:00'))
+        return True
+
+    @fmt.checks('uri', ValueError)
+    def _check_uri(instance):
+        if not isinstance(instance, str):
+            return True
+        parsed = urlparse(instance)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError('missing scheme or netloc')
+        return True
+
+    schema = json.load(open('$PROJECT_ROOT/rules/pending-callbacks.schema.json'))
+    data = json.load(open('$PROJECT_ROOT/state/pending-callbacks.json'))
+    validator = Draft7Validator(schema, format_checker=fmt)
+    errors = sorted(validator.iter_errors(data), key=lambda e: list(e.path))
+    if errors:
+        for e in errors:
+            path = '/'.join(str(p) for p in e.path) or '<root>'
+            print(f'  ✗ {path}: {e.message}', file=sys.stderr)
+        sys.exit(1)
+    print('✓ state/pending-callbacks.json passes schema validation')
+except ImportError:
+    print('⚠ jsonschema not installed, skipping schema validation (pip install jsonschema)')
+"; then
+    true
+  else
+    echo "✗ state/pending-callbacks.json fails schema validation"
+    exit 1
+  fi
+
+  # Additional integrity check beyond the schema: shortid must be unique
+  # across the file. The Telegram Callback Handler resolves callbacks via
+  # `list.find((e) => e.shortid === suffix)` so a duplicate would silently
+  # route a click to whichever entry comes first in the file. Enforce here
+  # so manual edits or a future writer regression cannot introduce one.
+  if python3 -c "
+import json, sys
+data = json.load(open('$PROJECT_ROOT/state/pending-callbacks.json'))
+seen = {}
+for i, e in enumerate(data):
+    sid = e.get('shortid')
+    if sid in seen:
+        print(f'  ✗ duplicate shortid {sid!r} at indices {seen[sid]} and {i}', file=sys.stderr)
+        sys.exit(1)
+    seen[sid] = i
+print('✓ state/pending-callbacks.json shortids are unique')
+"; then
+    true
+  else
+    echo "✗ state/pending-callbacks.json has duplicate shortids"
+    exit 1
+  fi
+fi
+
 echo ""
 echo "=== All validations passed ==="

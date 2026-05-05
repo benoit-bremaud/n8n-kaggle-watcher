@@ -13,6 +13,7 @@ n8n_data/
 # files committed alongside.
 state/last-heartbeat
 state/watchlist.json
+state/pending-callbacks.json
 
 # Node
 node_modules/

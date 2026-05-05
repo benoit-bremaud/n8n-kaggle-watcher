@@ -55,7 +55,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse Kaggle Competition/Hackathon Launch email\n// Verified against real emails:\n//   Competition: \"Competition Launch: ARC Prize 2026\" — uses \"Entry Deadline:\"\n//   Hackathon:   \"Hackathon Launch: The MedGemma Impact Challenge\" — uses \"Final Submission:\"\nconst subject = $input.first().json.subject || '';\nconst body = $input.first().json.text || '';\nconst html = $input.first().json.html || '';\n\n// Detect event type from subject\nlet eventType = 'competition';\nif (subject.match(/Hackathon Launch/i)) {\n  eventType = 'hackathon';\n}\n\n// Extract name from subject — format: \"Competition Launch: ARC Prize 2026\"\n// Note: name can contain colons (e.g. \"Measuring Progress Toward AGI: Cognitive Abilities\")\nconst nameMatch = subject.match(/(?:Competition|Hackathon)\\s+Launch:\\s*(.+)/i);\nconst competitionName = nameMatch ? nameMatch[1].trim() : subject;\n\n// Strip HTML tags for text search\nconst searchText = body || html.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ');\n\n// Extract deadline\n// Competition emails use \"Entry Deadline:\", Hackathon emails use \"Final Submission:\"\nconst deadlinePatterns = [\n  /Entry Deadline[:\\s]*([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /Final Submission[:\\s]*([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /Submission Deadline[:\\s]*([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /deadline[:\\s]+([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /ends?\\s+on\\s+([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i\n];\nlet deadline = 'Unknown';\nfor (const pattern of deadlinePatterns) {\n  const match = searchText.match(pattern);\n  if (match) {\n    deadline = match[1].trim();\n    break;\n  }\n}\n\n// Extract prize — format: \"Total Prizes:\" then \"$2,000,000\" or \"$100,000\"\nconst prizeMatch = searchText.match(/Total Prizes?[:\\s]*(\\$[\\d,\\.]+)/i);\nconst prize = prizeMatch ? prizeMatch[1].trim() : 'Not specified';\n\n// Extract Kaggle URL from HTML (links in <a href=\"...\">)\nconst urlPatterns = [\n  /https:\\/\\/www\\.kaggle\\.com\\/competitions\\/[^\\s\\\"'<>]+/i,\n  /https:\\/\\/www\\.kaggle\\.com\\/c\\/[^\\s\\\"'<>]+/i\n];\nlet url = 'https://www.kaggle.com/competitions';\nfor (const pattern of urlPatterns) {\n  const match = html.match(pattern) || body.match(pattern);\n  if (match) {\n    url = match[0].split('?')[0];\n    break;\n  }\n}\n\n// Infer track from email content (Kaggle emails have no explicit track field)\n// Keywords are matched against subject + body to classify the competition\nconst content = (subject + ' ' + searchText).toLowerCase();\nconst trackKeywords = [\n  { track: 'AI/ML', keywords: ['machine learning', 'deep learning', 'neural network', 'ai model', 'llm', 'nlp', 'computer vision', 'reinforcement learning', 'agi', 'generalization', 'reasoning'] },\n  { track: 'Data Science', keywords: ['data science', 'tabular', 'regression', 'classification', 'analytics', 'feature engineering', 'eda'] },\n  { track: 'Healthcare', keywords: ['medical', 'health', 'clinical', 'patient', 'diagnostics', 'biomedical', 'medgemma'] },\n  { track: 'Environment', keywords: ['climate', 'wildlife', 'biodiversity', 'species', 'bird', 'ecology', 'environmental'] }\n];\nlet track = 'Other';\nfor (const entry of trackKeywords) {\n  if (entry.keywords.some(kw => content.includes(kw))) {\n    track = entry.track;\n    break;\n  }\n}\n\nreturn [{\n  json: {\n    event_type: eventType,\n    competition_name: competitionName,\n    deadline: deadline,\n    prize: prize,\n    track: track,\n    url: url,\n    raw_subject: subject\n  }\n}];"
+        "jsCode": "// Parse Kaggle Competition/Hackathon Launch email\n// Verified against real emails:\n//   Competition: \"Competition Launch: ARC Prize 2026\" — uses \"Entry Deadline:\"\n//   Hackathon:   \"Hackathon Launch: The MedGemma Impact Challenge\" — uses \"Final Submission:\"\nconst subject = $input.first().json.subject || '';\nconst body = $input.first().json.text || '';\nconst html = $input.first().json.html || '';\n\n// Detect event type from subject\nlet eventType = 'competition';\nif (subject.match(/Hackathon Launch/i)) {\n  eventType = 'hackathon';\n}\n\n// Extract name from subject — format: \"Competition Launch: ARC Prize 2026\"\n// Note: name can contain colons (e.g. \"Measuring Progress Toward AGI: Cognitive Abilities\")\nconst nameMatch = subject.match(/(?:Competition|Hackathon)\\s+Launch:\\s*(.+)/i);\nconst competitionName = nameMatch ? nameMatch[1].trim() : subject;\n\n// Strip HTML tags for text search\nconst searchText = body || html.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ');\n\n// Extract deadline\n// Competition emails use \"Entry Deadline:\", Hackathon emails use \"Final Submission:\"\nconst deadlinePatterns = [\n  /Entry Deadline[:\\s]*([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /Final Submission[:\\s]*([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /Submission Deadline[:\\s]*([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /deadline[:\\s]+([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i,\n  /ends?\\s+on\\s+([A-Za-z]+\\s+\\d{1,2},?\\s+\\d{4})/i\n];\nlet deadline = 'Unknown';\nfor (const pattern of deadlinePatterns) {\n  const match = searchText.match(pattern);\n  if (match) {\n    deadline = match[1].trim();\n    break;\n  }\n}\n\n// Extract prize — format: \"Total Prizes:\" then \"$2,000,000\" or \"$100,000\"\nconst prizeMatch = searchText.match(/Total Prizes?[:\\s]*(\\$[\\d,\\.]+)/i);\nconst prize = prizeMatch ? prizeMatch[1].trim() : 'Not specified';\n\n// Extract Kaggle URL from HTML (links in <a href=\"...\">)\nconst urlPatterns = [\n  /https:\\/\\/www\\.kaggle\\.com\\/competitions\\/[^\\s\\\"'<>]+/i,\n  /https:\\/\\/www\\.kaggle\\.com\\/c\\/[^\\s\\\"'<>]+/i\n];\nlet url = 'https://www.kaggle.com/competitions';\nfor (const pattern of urlPatterns) {\n  const match = html.match(pattern) || body.match(pattern);\n  if (match) {\n    url = match[0].split('?')[0];\n    break;\n  }\n}\n\n// Infer track from email content (Kaggle emails have no explicit track field)\n// Keywords are matched against subject + body to classify the competition\nconst content = (subject + ' ' + searchText).toLowerCase();\nconst trackKeywords = [\n  { track: 'AI/ML', keywords: ['machine learning', 'deep learning', 'neural network', 'ai model', 'llm', 'nlp', 'computer vision', 'reinforcement learning', 'agi', 'generalization', 'reasoning'] },\n  { track: 'Data Science', keywords: ['data science', 'tabular', 'regression', 'classification', 'analytics', 'feature engineering', 'eda'] },\n  { track: 'Healthcare', keywords: ['medical', 'health', 'clinical', 'patient', 'diagnostics', 'biomedical', 'medgemma'] },\n  { track: 'Environment', keywords: ['climate', 'wildlife', 'biodiversity', 'species', 'bird', 'ecology', 'environmental'] }\n];\nlet track = 'Other';\nfor (const entry of trackKeywords) {\n  if (entry.keywords.some(kw => content.includes(kw))) {\n    track = entry.track;\n    break;\n  }\n}\n\nreturn [{\n  json: {\n    event_type: eventType,\n    competition_name: competitionName,\n    deadline: deadline,\n    prize: prize,\n    track: track,\n    url: url,\n    raw_subject: subject,\n    email_id: $input.first().json.id\n  }\n}];"
       },
       "id": "a14bb4a1-7bf4-4c8f-b448-67216e0c83a9",
       "name": "Parse Email",
@@ -146,7 +146,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        -96,
+        128,
         64
       ]
     },
@@ -163,13 +163,13 @@
                   {
                     "text": "✅ Yes, I join",
                     "additionalFields": {
-                      "callback_data": "=j:{{ $json.slug }}"
+                      "callback_data": "=j:{{ $json.shortid }}"
                     }
                   },
                   {
                     "text": "❌ No, skip",
                     "additionalFields": {
-                      "callback_data": "=s:{{ $json.slug }}"
+                      "callback_data": "=s:{{ $json.shortid }}"
                     }
                   }
                 ]
@@ -187,7 +187,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        128,
+        352,
         0
       ],
       "webhookId": "YOUR_WEBHOOK_ID",
@@ -207,7 +207,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        128,
+        352,
         192
       ]
     },
@@ -232,11 +232,24 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -320,
+        -336,
         96
       ],
       "id": "1f8d445c-70ae-4cd0-b2be-efd22d5836d6",
       "name": "Inject Chat ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst crypto = require('crypto');\nconst PATH = '/data/state/pending-callbacks.json';\nconst TTL_DAYS = 30;\n\nconst item = $input.first().json;\nconst competitionId = item.slug || item.competition_id || '';\n\n// Empty slug guard. Without it, a malformed Kaggle URL upstream\n// (Parse Email regex miss) would still emit Telegram inline buttons\n// backed by a stash entry whose competition_id is blank — the click\n// would reach join/skip with incomplete context, breaking the #46/#28\n// downstream consumers silently. Phase A intentionally routed that\n// case to the unknown branch via the Switch fallback. Throwing here\n// surfaces the upstream parsing failure via the global Error Handler\n// instead of producing a half-broken notification. Caught by Copilot\n// review on PR #69.\nif (!competitionId) {\n  throw new Error('Stash Pending Callback: refusing to write entry without competition slug; check Parse Email URL extraction upstream');\n}\n\nconst ts = new Date().toISOString();\n\nconst shortid = crypto\n  .createHash('sha256')\n  .update(competitionId + ts)\n  .digest('hex')\n  .slice(0, 8);\n\nlet raw = '[]';\ntry {\n  raw = fs.readFileSync(PATH, 'utf8');\n} catch (err) {\n  if (err.code !== 'ENOENT') throw err;\n}\n\nlet list;\ntry {\n  list = JSON.parse(raw);\n  if (!Array.isArray(list)) list = [];\n} catch (err) {\n  list = [];\n}\n\nconst cutoff = Date.now() - TTL_DAYS * 24 * 60 * 60 * 1000;\nlist = list.filter((e) => {\n  try {\n    return new Date(e.ts).getTime() >= cutoff;\n  } catch (_) {\n    return false;\n  }\n});\n\nconst entry = {\n  shortid,\n  competition_id:   competitionId,\n  competition_url:  item.url || '',\n  competition_name: item.competition_name || '',\n  chat_id:          item.action_config?.chat_id || '',\n  message_id:       null,\n  email_id:         item.email_id || '',\n  ts,\n};\n\nlist.push(entry);\nfs.writeFileSync(PATH, JSON.stringify(list, null, 2));\n\nreturn [{ json: { ...item, shortid, pending_callback_size: list.length } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        96
+      ],
+      "id": "fd20633f-d052-49ae-a9e9-cf942abc1d8d",
+      "name": "Stash Pending Callback"
     }
   ],
   "pinData": {},
@@ -340,6 +353,17 @@
       ]
     },
     "Inject Chat ID": {
+      "main": [
+        [
+          {
+            "node": "Stash Pending Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stash Pending Callback": {
       "main": [
         [
           {
