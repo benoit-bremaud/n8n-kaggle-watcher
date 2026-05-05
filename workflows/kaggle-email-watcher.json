@@ -146,7 +146,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        112,
+        128,
         64
       ]
     },
@@ -187,7 +187,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        336,
+        352,
         0
       ],
       "webhookId": "YOUR_WEBHOOK_ID",
@@ -207,7 +207,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        336,
+        352,
         192
       ]
     },
@@ -219,7 +219,7 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        -336,
+        -544,
         96
       ],
       "id": "9d7df6ef-ac22-4c97-b7ba-0b606ad458a7",
@@ -232,7 +232,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -112,
+        -336,
         96
       ],
       "id": "1f8d445c-70ae-4cd0-b2be-efd22d5836d6",
@@ -240,12 +240,12 @@
     },
     {
       "parameters": {
-        "jsCode": "const fs = require('fs');\nconst crypto = require('crypto');\nconst PATH = '/data/state/pending-callbacks.json';\nconst TTL_DAYS = 30;\n\nconst item = $input.first().json;\nconst ts = new Date().toISOString();\n\n// Deterministic 8-char shortid: sha256(competition_id + ts), hex slice.\n// Adding ts to the hash input guarantees a fresh hash per notification\n// while staying stable for that specific notification's callbacks.\nconst shortid = crypto\n  .createHash('sha256')\n  .update((item.slug || item.competition_id || '') + ts)\n  .digest('hex')\n  .slice(0, 8);\n\n// Read existing list, default to empty array on missing file or unparseable\n// JSON. ENOENT is treated as \"first write\"; any other read error throws so a\n// permission issue or filesystem failure surfaces clearly.\nlet raw = '[]';\ntry {\n  raw = fs.readFileSync(PATH, 'utf8');\n} catch (err) {\n  if (err.code !== 'ENOENT') throw err;\n}\n\nlet list;\ntry {\n  list = JSON.parse(raw);\n  if (!Array.isArray(list)) list = [];\n} catch (err) {\n  list = [];\n}\n\n// Prune entries older than TTL_DAYS days before append. Keeps the file\n// bounded — the Telegram Callback Handler reads the whole file on every\n// click, so unbounded growth would slow down each click linearly.\nconst cutoff = Date.now() - TTL_DAYS * 24 * 60 * 60 * 1000;\nlist = list.filter((e) => {\n  try {\n    return new Date(e.ts).getTime() >= cutoff;\n  } catch (_) {\n    return false;\n  }\n});\n\nconst entry = {\n  shortid,\n  competition_id:   item.slug || item.competition_id || '',\n  competition_url:  item.url || '',\n  competition_name: item.competition_name || '',\n  chat_id:          item.action_config?.chat_id || '',\n  message_id:       null,\n  email_id:         item.email_id || '',\n  ts,\n};\n\nlist.push(entry);\nfs.writeFileSync(PATH, JSON.stringify(list, null, 2));\n\nreturn [{ json: { ...item, shortid, pending_callback_size: list.length } }];\n"
+        "jsCode": "const fs = require('fs');\nconst crypto = require('crypto');\nconst PATH = '/data/state/pending-callbacks.json';\nconst TTL_DAYS = 30;\n\nconst item = $input.first().json;\nconst competitionId = item.slug || item.competition_id || '';\n\n// Empty slug guard. Without it, a malformed Kaggle URL upstream\n// (Parse Email regex miss) would still emit Telegram inline buttons\n// backed by a stash entry whose competition_id is blank — the click\n// would reach join/skip with incomplete context, breaking the #46/#28\n// downstream consumers silently. Phase A intentionally routed that\n// case to the unknown branch via the Switch fallback. Throwing here\n// surfaces the upstream parsing failure via the global Error Handler\n// instead of producing a half-broken notification. Caught by Copilot\n// review on PR #69.\nif (!competitionId) {\n  throw new Error('Stash Pending Callback: refusing to write entry without competition slug; check Parse Email URL extraction upstream');\n}\n\nconst ts = new Date().toISOString();\n\nconst shortid = crypto\n  .createHash('sha256')\n  .update(competitionId + ts)\n  .digest('hex')\n  .slice(0, 8);\n\nlet raw = '[]';\ntry {\n  raw = fs.readFileSync(PATH, 'utf8');\n} catch (err) {\n  if (err.code !== 'ENOENT') throw err;\n}\n\nlet list;\ntry {\n  list = JSON.parse(raw);\n  if (!Array.isArray(list)) list = [];\n} catch (err) {\n  list = [];\n}\n\nconst cutoff = Date.now() - TTL_DAYS * 24 * 60 * 60 * 1000;\nlist = list.filter((e) => {\n  try {\n    return new Date(e.ts).getTime() >= cutoff;\n  } catch (_) {\n    return false;\n  }\n});\n\nconst entry = {\n  shortid,\n  competition_id:   competitionId,\n  competition_url:  item.url || '',\n  competition_name: item.competition_name || '',\n  chat_id:          item.action_config?.chat_id || '',\n  message_id:       null,\n  email_id:         item.email_id || '',\n  ts,\n};\n\nlist.push(entry);\nfs.writeFileSync(PATH, JSON.stringify(list, null, 2));\n\nreturn [{ json: { ...item, shortid, pending_callback_size: list.length } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -560,
+        -96,
         96
       ],
       "id": "fd20633f-d052-49ae-a9e9-cf942abc1d8d",
@@ -302,7 +302,7 @@
       "main": [
         [
           {
-            "node": "Stash Pending Callback",
+            "node": "Read Config",
             "type": "main",
             "index": 0
           }
@@ -356,7 +356,7 @@
       "main": [
         [
           {
-            "node": "Route by Action Type",
+            "node": "Stash Pending Callback",
             "type": "main",
             "index": 0
           }
@@ -367,7 +367,7 @@
       "main": [
         [
           {
-            "node": "Read Config",
+            "node": "Route by Action Type",
             "type": "main",
             "index": 0
           }

@@ -164,6 +164,29 @@ except ImportError:
     echo "✗ state/pending-callbacks.json fails schema validation"
     exit 1
   fi
+
+  # Additional integrity check beyond the schema: shortid must be unique
+  # across the file. The Telegram Callback Handler resolves callbacks via
+  # `list.find((e) => e.shortid === suffix)` so a duplicate would silently
+  # route a click to whichever entry comes first in the file. Enforce here
+  # so manual edits or a future writer regression cannot introduce one.
+  if python3 -c "
+import json, sys
+data = json.load(open('$PROJECT_ROOT/state/pending-callbacks.json'))
+seen = {}
+for i, e in enumerate(data):
+    sid = e.get('shortid')
+    if sid in seen:
+        print(f'  ✗ duplicate shortid {sid!r} at indices {seen[sid]} and {i}', file=sys.stderr)
+        sys.exit(1)
+    seen[sid] = i
+print('✓ state/pending-callbacks.json shortids are unique')
+"; then
+    true
+  else
+    echo "✗ state/pending-callbacks.json has duplicate shortids"
+    exit 1
+  fi
 fi
 
 echo ""

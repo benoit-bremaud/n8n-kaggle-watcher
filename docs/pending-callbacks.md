@@ -45,7 +45,7 @@ The Telegram Callback Handler tolerates the file being absent (treated as empty 
 
 ## Writer — n8n Code node template
 
-Use this snippet in a Code node placed **after `Match Rule` and before `Send Telegram`** in the Kaggle Email Watcher workflow. It generates the deterministic shortid, prunes entries older than 30 days, appends the new entry, and exposes `shortid` on the node output so the downstream `Send Telegram` inline-keyboard expressions can reference `{{ $json.shortid }}`.
+Use this snippet in a Code node placed **after `Inject Chat ID` and before `Route by Action Type`** in the Kaggle Email Watcher workflow. The post-`Inject Chat ID` position is critical: `action_config.chat_id` is still the empty per-rule placeholder up until that node injects the configured `default_chat_id` from `rules/telegram-config.json`. Placing the stash writer earlier (e.g. directly after `Match Rule`) writes `chat_id: ''` into every entry — the stash entry is then technically valid against the schema but functionally useless to the callback handler downstream. The node generates the deterministic shortid, prunes entries older than 30 days, appends the new entry, and exposes `shortid` on the node output so the downstream `Send Telegram` inline-keyboard expressions can reference `{{ $json.shortid }}`.
 
 ```javascript
 const fs = require('fs');
@@ -216,7 +216,7 @@ rm state/pending-callbacks.json
 
 ## Future work
 
-- Atomic write with file locking (`flock`) once concurrent callbacks become possible — currently bounded by n8n's serialised handler.
+- Atomic write with file locking (`flock`) once concurrent **writes** become possible. The writer lives in the `Kaggle Email Watcher` workflow's `Stash Pending Callback` node and runs once per inbound Kaggle email. Today the schedule trigger fires sequentially (one email at a time, single n8n process), so the read-modify-write cycle in the writer is safe by happenstance. If the project ever grows multiple write paths (a parallel email source, a concurrent producer), file locking on the writer side becomes mandatory before two appends can race. The reader in `Telegram Callback Handler` is read-only and does not need locking.
 - Round-trip the live `message_id` back into the stash entry once the original Telegram message has been sent (Send Telegram emits `message_id` in its output) so the writer's null can be replaced for richer downstream debugging.
 - Migrate from a JSON file to SQLite once the entry count or write contention warrants it.
 - Consumer-specific helpers for #46 (skip — append to watchlist + Gmail mark-as-read) and #28 (accept — repo bootstrap from `competition_url`).
